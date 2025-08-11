@@ -15,7 +15,9 @@
 
 Aplicação web full-stack que implementa um quadro Kanban funcional. O backend é construído com Google Apps Script (JavaScript/V8) e o frontend com HTML/CSS/JS, utilizando bibliotecas como Bootstrap e SortableJS. A solução demonstra o uso de Google Sheets como um banco de dados NoSQL-like, além de um sistema de autenticação via token com o CacheService do Google.
 
-![Screenshot_1_kanbanAgil]
+<p align="center">
+  <img src="Screenshot_2_kanbanAgil.png" alt="Screenshot kanbanAgil" width="800">
+</p>
 
 ## 🎯 Sobre o Projeto
 
@@ -35,7 +37,9 @@ O projeto foi idealizado e desenvolvido por **Vitor Krewer**, unindo tecnologia,
 * **Tema Escuro/Claro:** Interface adaptável à preferência do usuário.
 * **Otimizado para Performance:** Carregamento de dados inicial em uma única requisição.
 
-![Screenshot_2_kanbanAgil]
+<p align="center">
+  <img src="Screenshot_1_kanbanAgil.png" alt="Screenshot kanbanAgil" width="800">
+</p>
 
 ## 🛠️ Tecnologias Utilizadas
 

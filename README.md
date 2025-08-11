@@ -51,19 +51,8 @@ O projeto foi idealizado e desenvolvido por **Vitor Krewer**, unindo tecnologia,
 
 ## 🚀 Como Configurar e Usar
 
-1.  **Crie uma cópia** deste projeto de Apps Script na sua conta Google.
-2.  **Crie uma nova Planilha Google** que servirá como banco de dados.
-3.  **Configure o Backend:**
-    * No arquivo `code.js`, insira o ID da sua planilha na variável `SPREADSHEET_ID`.
-    * No arquivo `setupUserKeys.js`, defina os nomes de usuário e chaves de acesso.
-    * Execute a função `setupUserKeys` uma vez pelo editor do Apps Script.
-4.  **Implante o Projeto:**
-    * Clique em "Implantar" > "Nova implantação".
-    * Selecione o tipo "App da Web".
-    * Em "Executar como", selecione "Eu".
-    * Em "Quem pode acessar", selecione "Qualquer pessoa".
-    * Clique em "Implantar" e autorize as permissões.
-5.  **Acesse a URL** fornecida e use as credenciais que você configurou.
+Acesse a documentação completa para configuração e implantação do projeto dentro a sua infraestrutura do Google Workspace.  [Clique aqui](docs/index.md)
+
 
 ## 📄 Licença
 

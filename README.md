@@ -1,6 +1,6 @@
 # Kanban Ágil com Google Apps Script
 <p align="center">
-  <img src="logo-learning-fly-full.png" alt="Logo do LearningFly" width="200">
+  <img src="docs/images/logo-learning-fly-full.png" alt="Logo do LearningFly" width="200">
 </p>
 
 ![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-4285F4?style=for-the-badge&logo=google&logoColor=white)
@@ -16,7 +16,7 @@
 Aplicação web full-stack que implementa um quadro Kanban funcional. O backend é construído com Google Apps Script (JavaScript/V8) e o frontend com HTML/CSS/JS, utilizando bibliotecas como Bootstrap e SortableJS. A solução demonstra o uso de Google Sheets como um banco de dados NoSQL-like, além de um sistema de autenticação via token com o CacheService do Google.
 
 <p align="center">
-  <img src="Screenshot_2_kanbanAgil.png" alt="Screenshot kanbanAgil" width="800">
+  <img src="docs/images/Screenshot_2_kanbanAgil.png" alt="Screenshot kanbanAgil" width="800">
 </p>
 
 ## 🎯 Sobre o Projeto
@@ -38,7 +38,7 @@ O projeto foi idealizado e desenvolvido por **Vitor Krewer**, unindo tecnologia,
 * **Otimizado para Performance:** Carregamento de dados inicial em uma única requisição.
 
 <p align="center">
-  <img src="Screenshot_1_kanbanAgil.png" alt="Screenshot kanbanAgil" width="800">
+  <img src="docs/images/Screenshot_1_kanbanAgil.png" alt="Screenshot kanbanAgil" width="800">
 </p>
 
 ## 🛠️ Tecnologias Utilizadas

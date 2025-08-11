@@ -20,6 +20,7 @@ Aplicação web full-stack que implementa um quadro Kanban funcional. O backend 
 </p>
 
 ## 🎯 Sobre o Projeto
+![Status](https://img.shields.io/badge/status-ativo-brightgreen?style=for-the-badge)
 
 O Kanban Ágil é uma ferramenta de gerenciamento de projetos que permite organizar tarefas em estágios (Backlog, A Fazer, Em Andamento, etc.) de forma visual e intuitiva. Ele foi desenvolvido para ser uma solução de baixo custo, segura e altamente personalizável, ideal para equipes pequenas e projetos pessoais.
 

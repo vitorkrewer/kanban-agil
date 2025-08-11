@@ -16,3 +16,4 @@ Para explorar a documentação, utilize os links abaixo:
 - **[Arquitetura do Projeto](./architecture.md):** Uma visão aprofundada de como o frontend, backend e o banco de dados se conectam e operam.
 - **[Funcionalidades](./features.md):** Uma descrição detalhada de todos os recursos disponíveis na aplicação.
 - **[Referência da API Backend](./backend_api.md):** Detalhes técnicos sobre as funções do servidor disponíveis para o cliente.
+- **[Roadmap] (./roadmap.md):** Acompanhe o roadmap para novas funcionalidades e o progresso do projeto. 

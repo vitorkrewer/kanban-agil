@@ -51,7 +51,7 @@ O projeto foi idealizado e desenvolvido por **Vitor Krewer**, unindo tecnologia,
 
 ## 🚀 Como Configurar e Usar
 
-Acesse a documentação completa para configuração e implantação do projeto dentro a sua infraestrutura do Google Workspace.  [Clique aqui](docs/index.md)
+Acesse a documentação completa para configuração e implantação do projeto dentro da sua infraestrutura do Google Workspace.  [Clique aqui](docs/index.md)
 
 
 ## 📄 Licença

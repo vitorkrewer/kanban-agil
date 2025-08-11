@@ -1,0 +1,424 @@
+<script>
+  /**
+   * Abre o modal para criar ou editar uma tarefa.
+   * @param {string} tarefaId - ID da tarefa a ser editada.
+   */
+  function abrirModalTarefa(tarefaId) {
+    // Limpar formulário
+    document.getElementById("form-tarefa").reset();
+    document.getElementById("tarefa-id").value = "";
+
+    // Configurar título do modal
+    document.getElementById("modal-tarefa-titulo").textContent = "Nova Tarefa";
+
+    // Preencher dropdown de estágios
+    popularDropdownEstagios();
+
+    // Preencher dropdown de responsáveis
+    popularDropdownUsuarios("#tarefa-responsavel", true);
+
+    // Se for edição, preencher dados da tarefa
+    if (tarefaId) {
+      const tarefa = tarefas.find(t => t.ID === tarefaId);
+      if (tarefa) {
+        document.getElementById("modal-tarefa-titulo").textContent = "Editar Tarefa";
+        document.getElementById("tarefa-id").value = tarefa.ID;
+        document.getElementById("tarefa-titulo").value = tarefa.Título || "";
+        document.getElementById("tarefa-descricao").value = tarefa.Descrição || "";
+        document.getElementById("tarefa-projeto").value = tarefa.Projeto || "";
+        document.getElementById("tarefa-responsavel").value = tarefa.Responsável || "";
+        document.getElementById("tarefa-email").value = tarefa.Email || "";
+        document.getElementById("tarefa-estagio").value = tarefa.Estágio || estagios[0];
+        document.getElementById("tarefa-prioridade").value = tarefa.Prioridade || "Média";
+        document.getElementById("tarefa-etiquetas").value = tarefa.Etiquetas || "";
+        document.getElementById("tarefa-feedback").value = tarefa.Feedback || "";
+
+        // Formatar data limite para o formato do input date (YYYY-MM-DD)
+        if (tarefa["Data Limite"]) {
+          const dataLimite = moment(tarefa["Data Limite"]).format("YYYY-MM-DD");
+          document.getElementById("tarefa-data-limite").value = dataLimite;
+        } else {
+          document.getElementById("tarefa-data-limite").value = "";
+        }
+      }
+    }
+
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById("modal-tarefa"));
+    modal.show();
+  }
+
+
+  /**
+   * Abre o modal de detalhes da tarefa.
+   * @param {string} tarefaId - ID da tarefa a ser visualizada.
+   */
+  function abrirModalDetalhesTarefa(tarefaId) {
+    const tarefa = tarefas.find(t => t.ID === tarefaId);
+    if (!tarefa) {
+      tratarErro("Tarefa não encontrada.", "Erro");
+      return;
+    }
+
+    // Encontrar o usuário responsável pelo ID
+    const responsavel = usuarios.find(u => u.ID === tarefa.Responsável);
+    const nomeResponsavel = responsavel ? responsavel["Nome Completo"] : (tarefa.Responsável || "N/A");
+
+    // Formatar datas
+    const dataCriacao = tarefa["Data Criação"] ? moment(tarefa["Data Criação"]).format("DD/MM/YYYY HH:mm") : "N/A";
+    const dataAtualizacao = tarefa["Data Atualização"] ? moment(tarefa["Data Atualização"]).format("DD/MM/YYYY HH:mm") : "N/A";
+    const dataLimite = tarefa["Data Limite"] ? moment(tarefa["Data Limite"]).format("DD/MM/YYYY") : "N/A";
+
+    // Formatar etiquetas
+    const etiquetas = (tarefa.Etiquetas || "").split(",").map(e => e.trim()).filter(e => e);
+    const etiquetasHTML = etiquetas.map(e => `<span class="badge bg-info me-1">${e}</span>`).join("");
+
+    // Formatar histórico
+    let historicoHTML = "";
+    try {
+      const historico = JSON.parse(tarefa.Histórico || "[]");
+      if (Array.isArray(historico) && historico.length > 0) {
+        historicoHTML = `
+        <div class="mt-3">
+          <h6>Histórico</h6>
+          <ul class="list-group">
+            ${historico.map(h => `
+              <li class="list-group-item">
+                <small>${moment(h.data).format("DD/MM/YYYY HH:mm")}</small>: 
+                ${h.acao}
+                ${h.de && h.para ? `(${h.de} → ${h.para})` : h.estagio ? `(${h.estagio})` : ""}
+              </li>
+            `).join("")}
+          </ul>
+        </div>
+      `;
+      }
+    } catch (e) {
+      console.error("Erro ao parsear histórico:", e);
+      historicoHTML = `<div class="alert alert-warning">Erro ao carregar histórico.</div>`;
+    }
+
+    // Preencher conteúdo do modal
+    document.getElementById("detalhes-tarefa-titulo").textContent = tarefa.Título || "Sem Título";
+    document.getElementById("detalhes-tarefa-conteudo").innerHTML = `
+    <div class="row">
+      <div class="col-md-8">
+        <h5>Descrição</h5>
+        <p>${tarefa.Descrição || "Sem descrição."}</p>
+        
+        ${tarefa.Projeto ? `
+          <h5>Projeto</h5>
+          <p>${tarefa.Projeto}</p>
+        ` : ""}
+        
+        ${tarefa.Feedback ? `
+          <h5>Feedback</h5>
+          <p>${tarefa.Feedback}</p>
+        ` : ""}
+        
+        ${etiquetasHTML ? `
+          <h5>Etiquetas</h5>
+          <div>${etiquetasHTML}</div>
+        ` : ""}
+        
+        ${historicoHTML}
+      </div>
+      <div class="col-md-4">
+        <div class="card mb-3">
+          <div class="card-header">Detalhes</div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Responsável:</span>
+              <span class="text-end">${nomeResponsavel}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Email:</span>
+              <span class="text-end text-truncate" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${tarefa.Email || "N/A"}">${tarefa.Email || "N/A"}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Estágio:</span>
+              <span class="text-end">
+                <span class="badge bg-primary">${tarefa.Estágio || "N/A"}</span>
+              </span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Prioridade:</span>
+              <span class="text-end">
+                <span class="badge ${tarefa.Prioridade === 'Alta' ? 'bg-danger' : tarefa.Prioridade === 'Média' ? 'bg-warning' : 'bg-info'}">
+                  ${tarefa.Prioridade || "Baixa"}
+                </span>
+              </span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Data Limite:</span>
+              <span class="text-end">${dataLimite}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Criação:</span>
+              <span class="text-end">${dataCriacao}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Atualização:</span>
+              <span class="text-end">${dataAtualizacao}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+
+    // Configurar botão de edição
+    document.getElementById("btn-editar-tarefa").onclick = () => {
+      // Fechar modal de detalhes
+      const modalDetalhes = bootstrap.Modal.getInstance(document.getElementById("modal-detalhes-tarefa"));
+      modalDetalhes.hide();
+
+      // Abrir modal de edição
+      setTimeout(() => abrirModalTarefa(tarefaId), 500);
+    };
+
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById("modal-detalhes-tarefa"));
+    modal.show();
+  }
+
+  /**
+   * Abre o modal para criar ou editar um aviso.
+   * @param {string} avisoId - ID do aviso a ser editado.
+   */
+  function abrirModalAviso(avisoId) {
+    // Limpar formulário
+    document.getElementById("form-aviso").reset();
+    document.getElementById("aviso-id").value = "";
+
+    // Configurar título do modal
+    document.getElementById("modal-aviso-titulo").textContent = "Novo Aviso";
+
+    // Se for edição, preencher dados do aviso
+    if (avisoId) {
+      const aviso = avisos.find(a => a.ID === avisoId);
+      if (aviso) {
+        document.getElementById("modal-aviso-titulo").textContent = "Editar Aviso";
+        document.getElementById("aviso-id").value = aviso.ID;
+        document.getElementById("aviso-titulo").value = aviso.Título || "";
+        document.getElementById("aviso-conteudo").value = aviso.Conteúdo || "";
+        document.getElementById("aviso-autor").value = aviso.Autor || "";
+        document.getElementById("aviso-cor").value = aviso.Cor || "#4361ee";
+        document.getElementById("aviso-fixado").checked = !!aviso.Fixado;
+
+        // Formatar data de expiração para o formato do input date (YYYY-MM-DD)
+        if (aviso["Data Expiração"]) {
+          const dataExpiracao = moment(aviso["Data Expiração"]).format("YYYY-MM-DD");
+          document.getElementById("aviso-data-expiracao").value = dataExpiracao;
+        } else {
+          document.getElementById("aviso-data-expiracao").value = "";
+        }
+      }
+    }
+
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById("modal-aviso"));
+    modal.show();
+  }
+
+
+
+  function mostrarTodosAvisos() {
+    // Criar modal para exibir todos os avisos
+    const modalDiv = document.createElement("div");
+    modalDiv.className = "modal fade";
+    modalDiv.id = "modal-todos-avisos";
+    modalDiv.setAttribute("tabindex", "-1");
+
+    modalDiv.innerHTML = `
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Todos os Avisos</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mural-container" id="todos-avisos-container">
+            <!-- Avisos serão adicionados aqui -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+    // Adicionar modal ao body
+    document.body.appendChild(modalDiv);
+
+    // Criar cartões para todos os avisos
+    const container = document.getElementById("todos-avisos-container");
+    avisos.forEach(aviso => {
+      const cartao = criarCartaoAviso(aviso);
+      container.appendChild(cartao);
+    });
+
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById("modal-todos-avisos"));
+    modal.show();
+
+    // Configurar evento para remover modal do DOM quando for fechado
+    modalDiv.addEventListener("hidden.bs.modal", function () {
+      document.body.removeChild(modalDiv);
+    });
+  }
+
+  // --- Funções de Usuários ---
+
+
+
+  function abrirModalUsuario(usuarioId) {
+    // Limpar formulário
+    document.getElementById("form-usuario").reset();
+    document.getElementById("usuario-id").value = "";
+
+    // Configurar título do modal
+    document.getElementById("modal-usuario-titulo").textContent = "Novo Usuário";
+
+    // Esconder campo de data de encerramento por padrão
+    document.getElementById("div-data-encerramento").classList.add("d-none");
+
+    // Se for edição, preencher dados do usuário
+    if (usuarioId) {
+      const usuario = usuarios.find(u => u.ID === usuarioId);
+      if (usuario) {
+        document.getElementById("modal-usuario-titulo").textContent = "Editar Usuário";
+        document.getElementById("usuario-id").value = usuario.ID;
+        document.getElementById("usuario-nome").value = usuario["Nome Completo"] || "";
+        document.getElementById("usuario-email").value = usuario.Email || "";
+        document.getElementById("usuario-equipe").value = usuario.Equipe || "";
+        document.getElementById("usuario-situacao").value = usuario.Situação || "Ativo";
+
+        // Mostrar campo de data de encerramento se situação for Inativo
+        if (usuario.Situação === "Inativo") {
+          document.getElementById("div-data-encerramento").classList.remove("d-none");
+        }
+
+        // Formatar datas para o formato do input date (YYYY-MM-DD)
+        if (usuario["Data de Admissão"]) {
+          const dataAdmissao = moment(usuario["Data de Admissão"]).format("YYYY-MM-DD");
+          document.getElementById("usuario-data-admissao").value = dataAdmissao;
+        } else {
+          document.getElementById("usuario-data-admissao").value = "";
+        }
+
+        if (usuario["Data de Encerramento"]) {
+          const dataEncerramento = moment(usuario["Data de Encerramento"]).format("YYYY-MM-DD");
+          document.getElementById("usuario-data-encerramento").value = dataEncerramento;
+        } else {
+          document.getElementById("usuario-data-encerramento").value = "";
+        }
+      }
+    }
+
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById("modal-usuario"));
+    modal.show();
+  }
+
+  function abrirModalDaily(dailyId) {
+    // Criar modal para daily
+    const modalDiv = document.createElement("div");
+    modalDiv.className = "modal fade";
+    modalDiv.id = "modal-daily";
+    modalDiv.setAttribute("tabindex", "-1");
+
+    // Configurar título do modal
+    const tituloModal = dailyId ? "Editar Daily" : "Registrar Daily";
+
+    modalDiv.innerHTML = `
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">${tituloModal}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-daily">
+            <input type="hidden" id="daily-id" value="${dailyId || ''}">
+            <div class="mb-3">
+              <label for="daily-usuario" class="form-label">Usuário</label>
+              <select class="form-select" id="daily-usuario" required>
+                <option value="">Selecione um usuário</option>
+                <!-- Opções serão geradas dinamicamente -->
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label for="daily-data" class="form-label">Data</label>
+              <input type="date" class="form-control" id="daily-data" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="daily-conteudo" class="form-label">O que você fez/está fazendo/planeja fazer?</label>
+              <textarea class="form-control" id="daily-conteudo" rows="5" required></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-salvar-daily">Salvar</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+    // Adicionar modal ao body
+    document.body.appendChild(modalDiv);
+
+    // Preencher dropdown de usuários
+    popularDropdownUsuarios("#daily-usuario", true);
+
+    // Definir data de hoje
+    document.getElementById("daily-data").value = moment().format("YYYY-MM-DD");
+
+    // Se for edição, preencher dados do daily
+    if (dailyId) {
+      const daily = dailies.find(d => d.ID === dailyId);
+      if (daily) {
+        document.getElementById("daily-usuario").value = daily["ID do Usuário"] || "";
+
+        // Formatar data para o formato do input date (YYYY-MM-DD)
+        if (daily.Data) {
+          const data = moment(daily.Data).format("YYYY-MM-DD");
+          document.getElementById("daily-data").value = data;
+        }
+
+        document.getElementById("daily-conteudo").value = daily.Conteúdo || "";
+      }
+    }
+
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById("modal-daily"));
+    modal.show();
+
+    // Configurar evento para remover modal do DOM quando for fechado
+    modalDiv.addEventListener("hidden.bs.modal", function () {
+      document.body.removeChild(modalDiv);
+    });
+
+    // Configurar evento para salvar daily
+    document.getElementById("btn-salvar-daily").addEventListener("click", salvarDaily);
+  }
+
+  function abrirModalEditarDaily(dailyId) {
+    abrirModalDaily(dailyId);
+  }
+
+  // Expor funções globalmente para uso em eventos inline
+  window.abrirModalTarefa = abrirModalTarefa;
+  window.abrirModalAviso = abrirModalAviso;
+  window.abrirModalUsuario = abrirModalUsuario;
+  window.abrirModalDaily = abrirModalDaily;
+  window.abrirModalEditarDaily = abrirModalEditarDaily;
+  window.mostrarTodosAvisos = mostrarTodosAvisos;
+  window.alternarSituacaoUsuario = alternarSituacaoUsuario;
+  window.recarregarDados = recarregarDados;
+  window.alternarTema = alternarTema;
+</script>

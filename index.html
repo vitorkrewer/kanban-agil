@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quadro Kanban Ágil</title>
+  
+  <!-- Bootstrap 5 via CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Font Awesome para ícones -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  
+  <!-- Animate.css para animações -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+  
+  <!-- Estilos personalizados -->
+  <?!= include('style.css'); ?>
+</head>
+<body>
+      <div id="loading-spinner" style="display: none;">
+        <div class="spinner-overlay"></div>
+        <div class="spinner-container">
+            <div class="spinner-dot"></div>
+            <div class="spinner-dot"></div>
+            <div class="spinner-dot"></div>
+        </div>
+    </div>
+
+    <div id="login-container">
+
+        <div class="card shadow-sm" style="width: 22rem;">
+            <div class="text-center"><img src="https://grupofocus.b-cdn.net/imagens/logo-learning-fly-full.png"
+                    alt="Logo da Empresa" style="max-width: 200px; margin-bottom: 1.5rem;"></div>
+                            <div class="text-center mb-3">
+            <h4 class="text-secondary fw-bold">
+                 <i class="fas fa-tasks me-2"></i>
+                 <span>Kanban Ágil</span>
+            </h4>
+        </div>
+            <div class="card-body p-4">
+                <h5 class="card-title text-center mb-4">Acesso ao Painel</h5>
+                <div class="mb-3">
+                    <label for="username" class="form-label">Usuário</label>
+                    <input type="text" class="form-control" id="username" placeholder="Insira o seu usuário">
+                </div>
+                <div class="mb-3">
+                    <label for="clientKey" class="form-label">Chave de Acesso</label>
+                    <input type="password" class="form-control" id="clientKey" placeholder="Insira a sua chave">
+                </div>
+                <div class="d-grid">
+                    <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
+                </div>
+                <div id="login-error" class="text-danger text-center mt-3" style="display: none;">Usuário ou chave
+                    inválida.</div>
+            </div>
+        </div>
+    </div>
+  <!-- Cabeçalho -->
+  <header class="navbar navbar-expand-lg navbar-dark bg-gradient" style="display: none;">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">
+        <i class="fas fa-tasks me-2"></i>
+        <span>Kanban Ágil</span>
+                            <span class="text-muted fst-italic me-2" style="font-size: 0.8rem;">by</span>
+                     <img src="https://grupofocus.b-cdn.net/imagens/logo-learning-fly-full.png" alt="LearningFly"
+                          style="height: 25px; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#aboutModal">
+  
+      </a>
+      
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="#" id="nav-quadro">
+              <i class="fas fa-columns me-1"></i> Quadro
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="nav-usuarios">
+              <i class="fas fa-users me-1"></i> Usuários
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="nav-relatorios">
+              <i class="fas fa-chart-bar me-1"></i> Relatórios
+            </a>
+          </li>
+        </ul>
+        
+        <div class="d-flex">
+          <button class="btn btn-success me-2" id="btn-usuarios">
+            <i class="fas fa-users me-1"></i> Usuários
+          </button>
+          <button class="btn btn-primary me-2" id="btn-nova-tarefa">
+            <i class="fas fa-plus me-1"></i> Nova Tarefa
+          </button>
+          <button class="btn btn-secondary me-2" id="btn-novo-aviso">
+            <i class="fas fa-bullhorn me-1"></i> Novo Aviso
+          </button>
+          <button class="btn btn-info text-white me-2" id="btn-recarregar">
+            <i class="fas fa-sync-alt me-1"></i> Recarregar Dados
+          </button>
+          <div class="theme-toggle-btn" id="btn-tema" title="Alternar Tema">
+            <i class="fas fa-moon theme-toggle-bg-icon theme-toggle-moon"></i>
+            <i class="fas fa-sun theme-toggle-bg-icon theme-toggle-sun"></i>
+            <div class="theme-toggle-slider">
+              <i class="fas fa-moon theme-toggle-icon"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Container principal -->
+  <div class="container-fluid mt-3" style="display: none;">
+    <!-- Seção Quadro Kanban -->
+    <div id="secao-quadro" class="row">
+      <!-- Quadro Kanban -->
+      <div class="col-12 mb-4">
+        <div class="kanban-board" id="kanban-board">
+          <!-- As colunas serão geradas dinamicamente pelo JavaScript -->
+          <div class="loading-spinner text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2">Carregando quadro...</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Mural de Avisos e Daily -->
+      <div class="col-12">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+              <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                  <i class="fas fa-bullhorn me-2"></i> Mural de Avisos
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" id="btn-expandir-mural">
+                  <i class="fas fa-expand-alt"></i>
+                </button>
+              </div>
+              <div class="card-body" id="mural-avisos">
+                <!-- Os avisos serão gerados dinamicamente pelo JavaScript -->
+                <div class="loading-spinner text-center py-3">
+                  <div class="spinner-border text-secondary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                  </div>
+                  <p class="mt-2">Carregando avisos...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+              <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                  <i class="fas fa-calendar-day me-2"></i> Daily
+                </h5>
+                <button class="btn btn-sm btn-primary" onclick="abrirModalDaily()">
+                  <i class="fas fa-plus me-1"></i> Registrar Daily
+                </button>
+              </div>
+              <div class="card-body" id="daily-recentes">
+                <p class="text-center text-muted">Registre suas atividades diárias</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Seção Usuários -->
+    <div id="secao-usuarios" class="row d-none">
+      <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-users me-2"></i> Gerenciamento de Usuários
+            </h5>
+            <button class="btn btn-primary" id="btn-novo-usuario">
+              <i class="fas fa-user-plus me-1"></i> Novo Usuário
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover" id="tabela-usuarios">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Equipe</th>
+                    <th>Situação</th>
+                    <th>Data de Admissão</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Os usuários serão gerados dinamicamente pelo JavaScript -->
+                  <tr>
+                    <td colspan="6" class="text-center">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                      </div>
+                      <p class="mt-2">Carregando usuários...</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Seção Relatórios -->
+    <div id="secao-relatorios" class="row d-none">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">
+              <i class="fas fa-chart-bar me-2"></i> Relatórios
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-center text-muted">Funcionalidade em desenvolvimento</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Nova Tarefa -->
+  <div class="modal fade" id="modal-tarefa" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modal-tarefa-titulo">Nova Tarefa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-tarefa">
+            <input type="hidden" id="tarefa-id">
+            
+            <div class="mb-3">
+              <label for="tarefa-titulo" class="form-label">Título</label>
+              <input type="text" class="form-control" id="tarefa-titulo" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="tarefa-descricao" class="form-label">Descrição</label>
+              <textarea class="form-control" id="tarefa-descricao" rows="3"></textarea>
+            </div>
+            
+            <div class="mb-3">
+              <label for="tarefa-projeto" class="form-label">Projeto</label>
+              <input type="text" class="form-control" id="tarefa-projeto">
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="tarefa-responsavel" class="form-label">Responsável</label>
+                <select class="form-select" id="tarefa-responsavel">
+                  <option value="">Selecione um responsável</option>
+                  <!-- Opções serão geradas dinamicamente -->
+                </select>
+              </div>
+              
+              <div class="col-md-6 mb-3">
+                <label for="tarefa-email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="tarefa-email" readonly>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="tarefa-estagio" class="form-label">Estágio</label>
+                <select class="form-select" id="tarefa-estagio" required>
+                  <!-- Opções serão geradas dinamicamente -->
+                </select>
+              </div>
+              
+              <div class="col-md-6 mb-3">
+                <label for="tarefa-prioridade" class="form-label">Prioridade</label>
+                <select class="form-select" id="tarefa-prioridade">
+                  <option value="Baixa">Baixa</option>
+                  <option value="Média" selected>Média</option>
+                  <option value="Alta">Alta</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="tarefa-data-limite" class="form-label">Data Limite</label>
+              <input type="date" class="form-control" id="tarefa-data-limite">
+            </div>
+            
+            <div class="mb-3">
+              <label for="tarefa-etiquetas" class="form-label">Etiquetas (separadas por vírgula)</label>
+              <input type="text" class="form-control" id="tarefa-etiquetas">
+            </div>
+            
+            <div class="mb-3">
+              <label for="tarefa-feedback" class="form-label">Feedback</label>
+              <textarea class="form-control" id="tarefa-feedback" rows="3" placeholder="Descreva como foi a execução da tarefa"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-salvar-tarefa">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Novo Aviso -->
+  <div class="modal fade" id="modal-aviso" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modal-aviso-titulo">Novo Aviso</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-aviso">
+            <input type="hidden" id="aviso-id">
+            
+            <div class="mb-3">
+              <label for="aviso-titulo" class="form-label">Título</label>
+              <input type="text" class="form-control" id="aviso-titulo" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="aviso-conteudo" class="form-label">Conteúdo</label>
+              <textarea class="form-control" id="aviso-conteudo" rows="3" required></textarea>
+            </div>
+            
+            <div class="mb-3">
+              <label for="aviso-autor" class="form-label">Autor</label>
+              <input type="text" class="form-control" id="aviso-autor">
+            </div>
+            
+            <div class="mb-3">
+              <label for="aviso-data-expiracao" class="form-label">Data de Expiração</label>
+              <input type="date" class="form-control" id="aviso-data-expiracao">
+            </div>
+            
+            <div class="mb-3">
+              <label for="aviso-cor" class="form-label">Cor</label>
+              <select class="form-select" id="aviso-cor">
+                <option value="#FFFFFF">Branco</option>
+                <option value="#00FFFF">Ciano</option>
+                <option value="#f72585">Rosa</option>
+                <option value="#4361ee" selected>Azul</option>
+                <option value="#4cc9f0">Azul Claro</option>
+                <option value="#7209b7">Roxo</option>
+                <option value="#3a0ca3">Roxo Escuro</option>
+              </select>
+            </div>
+            
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="aviso-fixado">
+              <label class="form-check-label" for="aviso-fixado">
+                Fixar no topo
+              </label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-salvar-aviso">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Detalhes da Tarefa -->
+  <div class="modal fade" id="modal-detalhes-tarefa" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detalhes-tarefa-titulo">Detalhes da Tarefa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body" id="detalhes-tarefa-conteudo">
+          <!-- Conteúdo será preenchido dinamicamente -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          <button type="button" class="btn btn-primary" id="btn-editar-tarefa">Editar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Novo Usuário -->
+  <div class="modal fade" id="modal-usuario" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modal-usuario-titulo">Novo Usuário</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-usuario">
+            <input type="hidden" id="usuario-id">
+            
+            <div class="mb-3">
+              <label for="usuario-nome" class="form-label">Nome Completo</label>
+              <input type="text" class="form-control" id="usuario-nome" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="usuario-email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="usuario-email" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="usuario-equipe" class="form-label">Equipe</label>
+              <input type="text" class="form-control" id="usuario-equipe">
+            </div>
+            
+            <div class="mb-3">
+              <label for="usuario-situacao" class="form-label">Situação</label>
+              <select class="form-select" id="usuario-situacao" required>
+                <option value="Ativo" selected>Ativo</option>
+                <option value="Inativo">Inativo</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label for="usuario-data-admissao" class="form-label">Data de Admissão</label>
+              <input type="date" class="form-control" id="usuario-data-admissao" required>
+            </div>
+            
+            <div class="mb-3 d-none" id="div-data-encerramento">
+              <label for="usuario-data-encerramento" class="form-label">Data de Encerramento</label>
+              <input type="date" class="form-control" id="usuario-data-encerramento">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-salvar-usuario">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+    <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aboutModalLabel"><i class="bi bi-info-circle-fill"></i> Sobre</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center"><img src="https://grupofocus.b-cdn.net/imagens/logo-learning-fly-full.png"
+                         alt="Logo da Empresa" style="max-width: 200px; margin-bottom: 1.5rem;"></div>
+                    <p><strong>Do insight à solução: o caminho até o LearningFly</strong></p>
+                    <p><strong>LearningFly</strong> é mais do que uma ferramenta — é um copiloto educacional. Criado para tornar a gestão de cursos mais simples, inteligente e organizada, ele permite localizar, cadastrar e acompanhar informações sobre repositórios de materiais didáticos, recursos de aprendizagem, cursos e processos pedagógicos e de secretaria. Tudo em um único lugar com fluidez e precisão. Também conta com recursos modulares.</p>
+                    <p>O projeto nasceu da pergunta: <em>“E se a tecnologia realmente trabalhasse a favor de quem coordena e educa?”</em> A resposta foi um sistema leve, automatizado e conectado diretamente ao ecossistema Google, usando <strong>Google Apps Script</strong> como motor e <strong>Inteligência Artificial</strong> como aliada estratégica.</p>
+                    <p>Do primeiro rascunho à aplicação funcional, tudo foi idealizado, estruturado e desenvolvido por <strong>Vitor Krewer</strong> — unindo código, design e visão sistêmica. O resultado é uma solução que prova como ferramentas acessíveis podem gerar alto impacto quando há propósito, intenção e pensamento técnico por trás.</p>
+                    <hr>
+                    <p class="text-center">
+                        Conecte-se com o desenvolvedor: <br>
+                        <a href="https://www.linkedin.com/in/vitorkrewer/" target="_blank" class="linkedin-link"
+                           rel="noopener noreferrer">
+                            <i i class="fa-brands fa-linkedin"></i> Vitor Krewer no LinkedIn
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/locale/pt-br.js"></script>
+  
+  <!-- Script principal -->
+  <?!= include('app.js'); ?>
+  <?!= include('ui.js'); ?>
+  <?!= include('services.js'); ?>
+  <?!= include('events.js'); ?>
+  <?!= include('modals.js'); ?>
+</body>
+</html>

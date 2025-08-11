@@ -1,0 +1,763 @@
+<script>
+
+    /**
+     * Carrega a preferência de tema do localStorage
+     */
+    function carregarPreferenciaTema() {
+        try {
+            const savedTheme = localStorage.getItem('kanban_theme');
+            if (savedTheme === 'dark') {
+                darkMode = true;
+                aplicarTemaEscuro();
+            } else {
+                darkMode = false;
+                aplicarTemaClaro();
+            }
+        } catch (e) {
+            console.warn("Não foi possível acessar localStorage para preferência de tema:", e);
+            // Usar tema claro como padrão
+            darkMode = false;
+            aplicarTemaClaro();
+        }
+    }
+
+    /**
+     * Alterna entre tema escuro e claro
+     */
+    function alternarTema() {
+        darkMode = !darkMode;
+
+        if (darkMode) {
+            aplicarTemaEscuro();
+        } else {
+            aplicarTemaClaro();
+        }
+
+        // Salvar preferência
+        try {
+            localStorage.setItem('kanban_theme', darkMode ? 'dark' : 'light');
+        } catch (e) {
+            console.warn("Não foi possível salvar preferência de tema:", e);
+        }
+    }
+
+    /**
+     * Aplica o tema escuro
+     */
+    function aplicarTemaEscuro() {
+        document.body.classList.add('dark-mode');
+
+        // Atualizar toggle de tema
+        const btnTema = document.getElementById('btn-tema');
+        if (btnTema) {
+            btnTema.classList.add('dark');
+        }
+    }
+
+    /**
+     * Aplica o tema claro
+     */
+    function aplicarTemaClaro() {
+        document.body.classList.remove('dark-mode');
+
+        // Atualizar toggle de tema
+        const btnTema = document.getElementById('btn-tema');
+        if (btnTema) {
+            btnTema.classList.remove('dark');
+        }
+    }
+
+
+    /**
+     * Mostra um indicador de carregamento centralizado
+     */
+    function mostrarIndicadorCarregamento(mensagem) {
+        // Evitar recursão infinita
+        if (isLoadingIndicatorVisible) return;
+        isLoadingIndicatorVisible = true;
+
+        // Limpa todas as seções e mostra um spinner central
+        ["#secao-quadro", "#secao-usuarios", "#secao-relatorios", "#secao-configuracoes"].forEach(id => {
+            const secao = document.querySelector(id);
+            if (secao) secao.classList.add("d-none");
+        });
+
+        let container = document.getElementById("loading-container");
+        if (!container) {
+            container = document.createElement("div");
+            container.id = "loading-container";
+            container.className = "d-flex justify-content-center align-items-center vh-100 position-absolute top-0 start-0 w-100 bg-light bg-opacity-75";
+            container.style.zIndex = "1056"; // Acima do modal
+            document.body.appendChild(container);
+        }
+
+        container.innerHTML = `
+    <div class="text-center">
+      <div class="spinner-border text-primary mb-2" role="status">
+        <span class="visually-hidden">Carregando...</span>
+      </div>
+      <p>${mensagem || "Carregando..."}</p>
+    </div>
+  `;
+        container.classList.remove("d-none");
+    }
+
+    /**
+     * Esconde o indicador de carregamento centralizado
+     */
+    function esconderIndicadorCarregamento() {
+        const container = document.getElementById("loading-container");
+        if (container) {
+            container.classList.add("d-none");
+        }
+
+        // Resetar flag
+        isLoadingIndicatorVisible = false;
+
+        // Mostra a seção do quadro por padrão após carregar
+        // Usar setTimeout para evitar recursão infinita
+        setTimeout(() => {
+            // Verificar qual seção deve estar visível
+            const secaoUsuarios = document.getElementById("secao-usuarios");
+            const secaoRelatorios = document.getElementById("secao-relatorios");
+            const secaoConfiguracoes = document.getElementById("secao-configuracoes");
+
+            if (secaoUsuarios && !secaoUsuarios.classList.contains("d-none")) {
+                // Seção de usuários já está visível, não fazer nada
+            } else if (secaoRelatorios && !secaoRelatorios.classList.contains("d-none")) {
+                // Seção de relatórios já está visível, não fazer nada
+            } else if (secaoConfiguracoes && !secaoConfiguracoes.classList.contains("d-none")) {
+                // Seção de configurações já está visível, não fazer nada
+            } else {
+                // Nenhuma seção está visível, mostrar quadro por padrão
+                mostrarSecaoSemRecursao("secao-quadro");
+            }
+        }, 0);
+    }
+
+    /**
+     * Popula o dropdown de estágios
+     */
+    function popularDropdownEstagios() {
+        const seletorEstagio = document.getElementById("tarefa-estagio");
+        if (seletorEstagio) {
+            seletorEstagio.innerHTML = "";
+            estagios.forEach(estagio => {
+                const option = document.createElement("option");
+                option.value = estagio;
+                option.textContent = estagio;
+                seletorEstagio.appendChild(option);
+            });
+        }
+    }
+
+    /**
+     * Popula um dropdown com usuários
+     */
+    function popularDropdownUsuarios(seletorId, apenasAtivos = false) {
+        const dropdown = document.querySelector(seletorId);
+        if (!dropdown) return;
+
+        const usuariosFiltrados = apenasAtivos
+            ? usuarios.filter(u => u && u.Situação === "Ativo")
+            : usuarios;
+
+        // Guardar a opção "Selecione..."
+        const placeholderOption = dropdown.querySelector("option[value='']");
+        dropdown.innerHTML = ""; // Limpar opções antigas
+        if (placeholderOption) {
+            dropdown.appendChild(placeholderOption); // Readicionar placeholder
+        }
+
+        usuariosFiltrados.sort((a, b) => a["Nome Completo"].localeCompare(b["Nome Completo"]));
+
+        usuariosFiltrados.forEach(usuario => {
+            if (usuario && usuario.ID && usuario["Nome Completo"]) {
+                const option = document.createElement("option");
+                option.value = usuario.ID;
+                option.textContent = usuario["Nome Completo"];
+                option.dataset.email = usuario.Email; // Armazenar email para fácil acesso
+                dropdown.appendChild(option);
+            }
+        });
+    }
+
+
+    function renderizarTarefas(dadosTarefas) {
+
+        tarefas = Array.isArray(dadosTarefas) ? dadosTarefas : [];
+        const quadroKanban = document.getElementById("kanban-board");
+        if (!quadroKanban) return;
+
+        quadroKanban.innerHTML = ""; // Limpar quadro
+        sortableInstances = []; // Limpar instâncias antigas
+
+        if (!Array.isArray(estagios) || estagios.length === 0) {
+            quadroKanban.innerHTML = `<div class="alert alert-warning m-3">Nenhum estágio definido.</div>`;
+            return;
+        }
+
+        estagios.forEach(estagio => {
+            if (estagio) {
+                const coluna = criarColunaKanban(estagio);
+                quadroKanban.appendChild(coluna);
+            }
+        });
+
+        if (tarefas.length > 0) {
+            tarefas.forEach(tarefa => {
+                if (tarefa && tarefa.Estágio) {
+                    const cartao = criarCartaoTarefa(tarefa);
+                    const colunaId = `coluna-${tarefa.Estágio.replace(/\s+/g, "-").toLowerCase()}`;
+                    const colunaBody = document.querySelector(`#${colunaId} .kanban-column-body`);
+                    if (colunaBody) {
+                        colunaBody.appendChild(cartao);
+                    } else {
+                        console.warn(`Coluna não encontrada para estágio: ${tarefa.Estágio}`);
+                    }
+                }
+            });
+            inicializarSortable();
+            atualizarTodosContadoresColunas();
+        }
+    }
+
+    function criarColunaKanban(estagio) {
+        const colunaId = `coluna-${estagio.replace(/\s+/g, "-").toLowerCase()}`;
+        const coluna = document.createElement("div");
+        coluna.className = "kanban-column";
+        coluna.id = colunaId;
+        coluna.innerHTML = `
+            <div class="kanban-column-header">
+              <span>${estagio}</span>
+              <span class="badge bg-primary rounded-pill">0</span>
+            </div>
+            <div class="kanban-column-body" data-estagio="${estagio}">
+              <!-- Cartões aqui -->
+            </div>`;
+
+        // Adicionar estilo para limitar altura e mostrar barra de rolagem após 5 itens
+        const colunaBody = coluna.querySelector(".kanban-column-body");
+        colunaBody.style.maxHeight = "calc(5 * (100px + 0.5rem))"; // Altura aproximada de 5 cartões + margem
+        colunaBody.style.overflowY = "auto";
+        return coluna;
+    }
+
+    function criarCartaoTarefa(tarefa) {
+        if (!tarefa || !tarefa.ID) return document.createElement("div");
+
+        const cartao = document.createElement("div");
+        const prioridadeClass = `priority-${(tarefa.Prioridade || "baixa").toLowerCase()}`;
+        cartao.className = `kanban-card ${prioridadeClass}`;
+        cartao.setAttribute("data-id", tarefa.ID);
+        cartao.setAttribute("draggable", "true"); // Necessário para SortableJS
+
+        // Encontrar o usuário responsável pelo ID
+        const responsavel = usuarios.find(u => u.ID === tarefa.Responsável);
+        const nomeResponsavel = responsavel ? responsavel["Nome Completo"] : (tarefa.Responsável || "N/A");
+        const iniciais = nomeResponsavel.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() || "?";
+
+        const dataLimite = tarefa["Data Limite"] ? moment(tarefa["Data Limite"]).format("DD/MM/YY") : "";
+        const etiquetas = (tarefa.Etiquetas || "").split(",").map(e => e.trim()).filter(e => e);
+        const etiquetasHTML = etiquetas.map(e => `<span class="kanban-card-tag">${e}</span>`).join("");
+        const descricaoCurta = (tarefa.Descrição || "").substring(0, 80) + ((tarefa.Descrição || "").length > 80 ? "..." : "");
+
+        cartao.innerHTML = `
+            <div class="kanban-card-title">${tarefa.Título || "Sem Título"}</div>
+            ${tarefa.Projeto ? `<div class="kanban-card-project"><i class="fas fa-folder-open me-1"></i>${tarefa.Projeto}</div>` : ""}
+            <div class="kanban-card-desc">${descricaoCurta}</div>
+            ${etiquetasHTML ? `<div class="kanban-card-tags">${etiquetasHTML}</div>` : ""}
+            <div class="kanban-card-footer">
+              <div class="kanban-card-date" title="Data Limite">
+                ${dataLimite ? `<i class="far fa-calendar-alt me-1"></i>${dataLimite}` : ""}
+              </div>
+              <div class="kanban-card-avatar" title="${nomeResponsavel}">${iniciais}</div>
+            </div>`;
+
+        cartao.addEventListener("click", () => abrirModalDetalhesTarefa(tarefa.ID));
+        return cartao;
+    }
+
+    function inicializarSortable() {
+        const colunas = document.querySelectorAll(".kanban-column-body");
+        if (!colunas || colunas.length === 0) return;
+        colunas.forEach(coluna => {
+            const instance = new Sortable(coluna, {
+                group: "tarefas",
+                animation: 150,
+                ghostClass: "kanban-card-ghost",
+                chosenClass: "kanban-card-chosen",
+                dragClass: "kanban-card-drag",
+                onEnd: function (evt) {
+                    const tarefaId = evt.item.getAttribute("data-id");
+                    const novoEstagio = evt.to.getAttribute("data-estagio");
+
+                    if (tarefaId && novoEstagio) {
+                        servicoAtualizarEstagio(tarefaId, novoEstagio);
+                    }
+                }
+            });
+            sortableInstances.push(instance);
+        });
+    }
+
+    function atualizarEstagioTarefa(tarefaId, novoEstagio) {
+        // Mostrar indicador de carregamento no cartão
+        const cartao = document.querySelector(`.kanban-card[data-id="${tarefaId}"]`);
+        if (cartao) {
+            cartao.classList.add("updating");
+        }
+
+        google.script.run
+            .withSuccessHandler(function (resultado) {
+                console.log(`Estágio da tarefa ${tarefaId} atualizado para ${novoEstagio}`);
+
+                // Atualizar o objeto tarefa na memória
+                const tarefaIndex = tarefas.findIndex(t => t.ID === tarefaId);
+                if (tarefaIndex !== -1) {
+                    tarefas[tarefaIndex].Estágio = novoEstagio;
+                    tarefas[tarefaIndex]["Data Atualização"] = new Date().toISOString();
+                }
+
+                // Remover classe de atualização
+                if (cartao) {
+                    cartao.classList.remove("updating");
+                }
+
+                // Atualizar contadores
+                atualizarTodosContadoresColunas();
+            })
+            .withFailureHandler(function (erro) {
+                console.error("Erro ao atualizar estágio da tarefa:", erro);
+                tratarErro(erro, "Falha ao atualizar estágio da tarefa");
+
+                // Remover classe de atualização
+                if (cartao) {
+                    cartao.classList.remove("updating");
+                }
+
+                // Recarregar tarefas para restaurar estado correto
+                carregarTarefas();
+            })
+            .atualizarEstagioTarefa(sessionToken, tarefaId, novoEstagio);
+    }
+
+    function atualizarTodosContadoresColunas() {
+        estagios.forEach(estagio => {
+            const colunaId = `coluna-${estagio.replace(/\s+/g, "-").toLowerCase()}`;
+            const contador = document.querySelector(`#${colunaId} .badge`);
+            const colunaBody = document.querySelector(`#${colunaId} .kanban-column-body`);
+
+            if (contador && colunaBody) {
+                const numTarefas = colunaBody.querySelectorAll(".kanban-card").length;
+                contador.textContent = numTarefas;
+            }
+        });
+    }
+
+    function renderizarAvisos(dadosAvisos) {
+        avisos = Array.isArray(dadosAvisos) ? dadosAvisos : [];
+        const muralAvisos = document.getElementById("mural-avisos");
+        if (!muralAvisos) return;
+
+        // Limpar mural
+        muralAvisos.innerHTML = "";
+
+        if (avisos.length === 0) {
+            muralAvisos.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="fas fa-bullhorn fa-3x mb-3"></i>
+        <p>Nenhum aviso disponível.</p>
+        <button class="btn btn-sm btn-primary" onclick="abrirModalAviso()">
+          <i class="fas fa-plus me-1"></i> Novo Aviso
+        </button>
+      </div>
+    `;
+            return;
+        }
+
+        // Criar container para os avisos
+        const container = document.createElement("div");
+        container.className = "mural-container";
+
+        // Ordenar avisos: fixados primeiro, depois por data de criação (mais recentes primeiro)
+        avisos.sort((a, b) => {
+            if (a.Fixado && !b.Fixado) return -1;
+            if (!a.Fixado && b.Fixado) return 1;
+
+            const dataA = a["Data Criação"] ? new Date(a["Data Criação"]) : new Date(0);
+            const dataB = b["Data Criação"] ? new Date(b["Data Criação"]) : new Date(0);
+            return dataB - dataA;
+        });
+
+        // Limitar número de avisos exibidos
+        const limiteAvisos = parseInt(configuracoesApp.limite_avisos) || 10;
+        const avisosExibidos = avisos.slice(0, limiteAvisos);
+
+        // Criar cartões para cada aviso
+        avisosExibidos.forEach(aviso => {
+            const cartao = criarCartaoAviso(aviso);
+            container.appendChild(cartao);
+        });
+
+        // Adicionar container ao mural
+        muralAvisos.appendChild(container);
+
+        // Mostrar contador se houver mais avisos do que o limite
+        if (avisos.length > limiteAvisos) {
+            const contador = document.createElement("div");
+            contador.className = "text-center mt-3";
+            contador.innerHTML = `
+      <button class="btn btn-sm btn-outline-secondary" onclick="mostrarTodosAvisos()">
+        Ver mais ${avisos.length - limiteAvisos} avisos
+      </button>
+    `;
+            muralAvisos.appendChild(contador);
+        }
+    }
+
+    function criarCartaoAviso(aviso) {
+        const cartao = document.createElement("div");
+        cartao.className = `aviso-card ${aviso.Fixado ? 'fixado' : ''}`;
+        cartao.setAttribute("data-id", aviso.ID);
+
+        // Aplicar cor personalizada
+        if (aviso.Cor) {
+            cartao.style.backgroundColor = aviso.Cor;
+            cartao.style.borderColor = aviso.Cor;
+
+            // Ajustar cor do texto com base na cor de fundo
+            const corEscura = isColorDark(aviso.Cor);
+            if (corEscura) {
+                cartao.style.color = "#fff";
+            }
+        }
+
+        // Formatar data de criação
+        const dataCriacao = aviso["Data Criação"] ? moment(aviso["Data Criação"]).format("DD/MM/YYYY") : "";
+
+        // Formatar data de expiração
+        let dataExpiracao = "";
+        if (aviso["Data Expiração"]) {
+            dataExpiracao = moment(aviso["Data Expiração"]).format("DD/MM/YYYY");
+
+            // Verificar se está próximo da expiração (menos de 3 dias)
+            const hoje = moment();
+            const expira = moment(aviso["Data Expiração"]);
+            const diasRestantes = expira.diff(hoje, 'days');
+
+            if (diasRestantes <= 3 && diasRestantes >= 0) {
+                dataExpiracao = `<span class="text-danger">Expira em ${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''}</span>`;
+            }
+        }
+
+        cartao.innerHTML = `
+    <div class="aviso-actions">
+      <button class="btn btn-sm btn-light" onclick="abrirModalAviso('${aviso.ID}')">
+        <i class="fas fa-edit"></i>
+      </button>
+    </div>
+    <div class="aviso-titulo">${aviso.Título || "Sem Título"}</div>
+    <div class="aviso-conteudo">${aviso.Conteúdo || ""}</div>
+    <div class="aviso-footer">
+      <div>${aviso.Autor ? `Por: ${aviso.Autor}` : ""}</div>
+      <div>${dataCriacao}${dataExpiracao ? ` | ${dataExpiracao}` : ""}</div>
+    </div>
+  `;
+
+        return cartao;
+    }
+
+    function renderizarUsuarios(dadosUsuarios) {
+
+        usuarios = Array.isArray(dadosUsuarios) ? dadosUsuarios : [];
+        const tabelaUsuarios = document.getElementById("tabela-usuarios");
+        if (!tabelaUsuarios) return;
+
+        // Obter tbody
+        const tbody = tabelaUsuarios.querySelector("tbody");
+        if (!tbody) return;
+
+        // Limpar tabela
+        tbody.innerHTML = "";
+
+        if (usuarios.length === 0) {
+            tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center py-4">
+          <p class="text-muted">Nenhum usuário cadastrado.</p>
+          <button class="btn btn-sm btn-primary" onclick="abrirModalUsuario()">
+            <i class="fas fa-user-plus me-1"></i> Novo Usuário
+          </button>
+        </td>
+      </tr>
+    `;
+            return;
+        }
+
+        // Ordenar usuários por nome
+        usuarios.sort((a, b) => (a["Nome Completo"] || "").localeCompare(b["Nome Completo"] || ""));
+
+        // Criar linhas para cada usuário
+        usuarios.forEach(usuario => {
+            const tr = document.createElement("tr");
+
+            // Formatar datas
+            const dataAdmissao = usuario["Data de Admissão"] ? moment(usuario["Data de Admissão"]).format("DD/MM/YYYY") : "N/A";
+            const dataEncerramento = usuario["Data de Encerramento"] && usuario.Situação === "Inativo" ?
+                moment(usuario["Data de Encerramento"]).format("DD/MM/YYYY") : "";
+
+            // Classe para destacar usuários inativos
+            if (usuario.Situação === "Inativo") {
+                tr.classList.add("table-secondary");
+            }
+
+            tr.innerHTML = `
+      <td>${usuario["Nome Completo"] || ""}</td>
+      <td>${usuario.Email || ""}</td>
+      <td>${usuario.Equipe || ""}</td>
+      <td>
+        <span class="badge ${usuario.Situação === 'Ativo' ? 'bg-success' : 'bg-secondary'}">
+          ${usuario.Situação || "N/A"}
+        </span>
+      </td>
+      <td>${dataAdmissao}</td>
+      <td>
+        <button class="btn btn-sm btn-primary me-1" onclick="abrirModalUsuario('${usuario.ID}')">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn-sm btn-${usuario.Situação === 'Ativo' ? 'danger' : 'success'}" 
+                onclick="alternarSituacaoUsuario('${usuario.ID}')">
+          <i class="fas fa-${usuario.Situação === 'Ativo' ? 'user-slash' : 'user-check'}"></i>
+        </button>
+      </td>
+    `;
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    function toggleDataEncerramento() {
+        const situacao = document.getElementById("usuario-situacao").value;
+        const divDataEncerramento = document.getElementById("div-data-encerramento");
+
+        if (situacao === "Inativo") {
+            divDataEncerramento.classList.remove("d-none");
+            // Definir data de encerramento como hoje se estiver vazia
+            if (!document.getElementById("usuario-data-encerramento").value) {
+                document.getElementById("usuario-data-encerramento").value = moment().format("YYYY-MM-DD");
+            }
+        } else {
+            divDataEncerramento.classList.add("d-none");
+            // Limpar data de encerramento
+            document.getElementById("usuario-data-encerramento").value = "";
+        }
+    }
+
+    function renderizarDailiesRecentes(dadosDailies) {
+        const container = document.getElementById("daily-recentes");
+        if (!container) return;
+
+        container.innerHTML = "";
+
+        if (!Array.isArray(dadosDailies) || dadosDailies.length === 0) {
+            container.innerHTML = `
+      <div class="text-center text-muted py-3">
+        <p>Nenhum registro de daily para hoje.</p>
+      </div>
+    `;
+            return;
+        }
+
+        const lista = document.createElement("div");
+        lista.className = "list-group";
+
+        // 1. Ordena os dailies para que os mais novos fiquem no topo
+        dadosDailies.sort((a, b) => {
+            const dataA = a["Data Criação"] ? new Date(a["Data Criação"]) : new Date(0);
+            const dataB = b["Data Criação"] ? new Date(b["Data Criação"]) : new Date(0);
+            return dataB - dataA;
+        });
+
+        // 2. Pega apenas os 5 registros mais recentes do array ordenado
+        const dailiesExibidos = dadosDailies.slice(0, 5);
+
+        // 3. Itera sobre os 5 registros filtrados para exibi-los
+        dailiesExibidos.forEach(daily => {
+            const item = document.createElement("div");
+            item.className = "list-group-item list-group-item-action flex-column align-items-start";
+
+            const horario = daily["Data Criação"] ? moment(daily["Data Criação"]).format("HH:mm") : "";
+
+            item.innerHTML = `
+      <div class="d-flex w-100 justify-content-between">
+        <h6 class="mb-1">${daily["Nome do Usuário"] || "Usuário"}</h6>
+        <div>
+          <small class="me-2">${horario}</small>
+          <button class="btn btn-sm btn-outline-primary" onclick="abrirModalEditarDaily('${daily.ID}')">
+            <i class="fas fa-edit"></i>
+          </button>
+        </div>
+      </div>
+      <p class="mb-1">${daily.Conteúdo || ""}</p>
+    `;
+
+            lista.appendChild(item);
+        });
+
+        container.appendChild(lista);
+
+
+    }
+
+    function inicializarBootstrapComponents() {
+        // Inicializar tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Inicializar popovers
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl);
+        });
+    }
+
+    function tratarErro(erro, titulo) {
+        console.error(titulo || "Erro", erro);
+
+        // Criar toast para exibir erro
+        const toastContainer = document.getElementById("toast-container");
+        if (!toastContainer) {
+            const container = document.createElement("div");
+            container.id = "toast-container";
+            container.className = "toast-container position-fixed bottom-0 end-0 p-3";
+            document.body.appendChild(container);
+        }
+
+        const toastId = "toast-" + Date.now();
+        const toastDiv = document.createElement("div");
+        toastDiv.id = toastId;
+        toastDiv.className = "toast";
+        toastDiv.setAttribute("role", "alert");
+        toastDiv.setAttribute("aria-live", "assertive");
+        toastDiv.setAttribute("aria-atomic", "true");
+
+        const mensagemErro = typeof erro === "string" ? erro : (erro.message || "Erro desconhecido");
+
+        toastDiv.innerHTML = `
+    <div class="toast-header bg-danger text-white">
+      <i class="fas fa-exclamation-circle me-2"></i>
+      <strong class="me-auto">${titulo || "Erro"}</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Fechar"></button>
+    </div>
+    <div class="toast-body">
+      ${mensagemErro}
+    </div>
+  `;
+
+        document.getElementById("toast-container").appendChild(toastDiv);
+
+        const toast = new bootstrap.Toast(toastDiv);
+        toast.show();
+
+        // Remover toast do DOM após ser escondido
+        toastDiv.addEventListener("hidden.bs.toast", function () {
+            document.getElementById("toast-container").removeChild(toastDiv);
+        });
+    }
+
+    function mostrarNotificacao(mensagem, tipo) {
+        // Criar toast para exibir notificação
+        const toastContainer = document.getElementById("toast-container");
+        if (!toastContainer) {
+            const container = document.createElement("div");
+            container.id = "toast-container";
+            container.className = "toast-container position-fixed bottom-0 end-0 p-3";
+            document.body.appendChild(container);
+        }
+
+        const toastId = "toast-" + Date.now();
+        const toastDiv = document.createElement("div");
+        toastDiv.id = toastId;
+        toastDiv.className = "toast";
+        toastDiv.setAttribute("role", "alert");
+        toastDiv.setAttribute("aria-live", "assertive");
+        toastDiv.setAttribute("aria-atomic", "true");
+
+        let icone = "fas fa-info-circle";
+        let corFundo = "bg-primary";
+
+        switch (tipo) {
+            case "success":
+                icone = "fas fa-check-circle";
+                corFundo = "bg-success";
+                break;
+            case "warning":
+                icone = "fas fa-exclamation-triangle";
+                corFundo = "bg-warning";
+                break;
+            case "danger":
+            case "error":
+                icone = "fas fa-exclamation-circle";
+                corFundo = "bg-danger";
+                break;
+            case "info":
+            default:
+                icone = "fas fa-info-circle";
+                corFundo = "bg-primary";
+                break;
+        }
+
+        toastDiv.innerHTML = `
+    <div class="toast-header ${corFundo} text-white">
+      <i class="${icone} me-2"></i>
+      <strong class="me-auto">Notificação</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Fechar"></button>
+    </div>
+    <div class="toast-body">
+      ${mensagem}
+    </div>
+  `;
+
+        document.getElementById("toast-container").appendChild(toastDiv);
+
+        const toast = new bootstrap.Toast(toastDiv);
+        toast.show();
+
+        // Remover toast do DOM após ser escondido
+        toastDiv.addEventListener("hidden.bs.toast", function () {
+            document.getElementById("toast-container").removeChild(toastDiv);
+        });
+    }
+
+    function isColorDark(hexColor) {
+        // Converter hex para RGB
+        let r, g, b;
+
+        if (hexColor.startsWith('#')) {
+            hexColor = hexColor.substring(1);
+        }
+
+        if (hexColor.length === 3) {
+            r = parseInt(hexColor.charAt(0) + hexColor.charAt(0), 16);
+            g = parseInt(hexColor.charAt(1) + hexColor.charAt(1), 16);
+            b = parseInt(hexColor.charAt(2) + hexColor.charAt(2), 16);
+        } else if (hexColor.length === 6) {
+            r = parseInt(hexColor.substring(0, 2), 16);
+            g = parseInt(hexColor.substring(2, 4), 16);
+            b = parseInt(hexColor.substring(4, 6), 16);
+        } else {
+            return false; // Cor inválida, assumir clara
+        }
+
+        // Calcular luminância
+        // Fórmula: 0.299*R + 0.587*G + 0.114*B
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+        // Retorna true se a cor for escura (luminância < 0.5)
+        return luminance < 0.5;
+    }
+
+</script>

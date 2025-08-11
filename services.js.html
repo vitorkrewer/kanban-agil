@@ -1,0 +1,551 @@
+<script>
+    /**
+     * Recarrega todos os dados da aplicação
+     */
+    function recarregarDados() {
+        mostrarNotificacao("Recarregando dados...", "info");
+        carregarDadosIniciais();
+    }
+
+    /**
+     * Carrega todos os dados iniciais (tarefas, avisos, usuários) com uma única chamada ao servidor.
+     */
+    function carregarDadosIniciais() {
+        mostrarIndicadorCarregamento("Carregando dados...");
+        google.script.run
+            .withSuccessHandler(function (dados) {
+                // 1. Popula as variáveis globais com os dados do pacote
+                usuarios = Array.isArray(dados.usuarios) ? dados.usuarios : [];
+                tarefas = Array.isArray(dados.tarefas) ? dados.tarefas : [];
+                avisos = Array.isArray(dados.avisos) ? dados.avisos : [];
+                dailies = Array.isArray(dados.dailies) ? dados.dailies : [];
+
+                console.log(`${usuarios.length} usuários, ${tarefas.length} tarefas, ${avisos.length} avisos, e ${dailies.length} dailies carregados.`);
+
+                // 2. Preenche os dropdowns que dependem dos usuários
+                popularDropdownUsuarios("#tarefa-responsavel", true);
+                popularDropdownUsuarios("#daily-usuario", true);
+
+                // 3. Renderiza todas as seções com os dados já carregados
+                renderizarTarefas(tarefas);
+                renderizarAvisos(avisos);
+                renderizarDailiesRecentes(dailies);
+
+                // Renderiza usuários se a seção estiver visível
+                if (!document.getElementById("secao-usuarios").classList.contains("d-none")) {
+                    renderizarUsuarios(usuarios);
+                }
+
+                esconderIndicadorCarregamento();
+            })
+            .withFailureHandler(function (erro) {
+                console.error("Erro ao carregar dados iniciais:", erro);
+                tratarErro(erro, "Falha crítica ao carregar os dados da aplicação.");
+                esconderIndicadorCarregamento();
+            })
+            .obterDadosIniciais(sessionToken); // <-- FAZ A CHAMADA ÚNICA E OTIMIZADA
+    }
+
+    function servicoAtualizarEstagio(tarefaId, novoEstagio) {
+      const cartao = document.querySelector(`.kanban-card[data-id="${tarefaId}"]`);
+      if (cartao) cartao.classList.add("updating");
+    
+      google.script.run
+        .withSuccessHandler(function(resultado) {
+          if (cartao) cartao.classList.remove("updating");
+    
+          const tarefaIndex = tarefas.findIndex(t => t.ID === tarefaId);
+          if (tarefaIndex !== -1) {
+            tarefas[tarefaIndex].Estágio = novoEstagio;
+            tarefas[tarefaIndex]["Data Atualização"] = new Date().toISOString();
+          }
+          atualizarTodosContadoresColunas();
+        })
+        .withFailureHandler(function(erro) {
+          if (cartao) cartao.classList.remove("updating");
+          tratarErro(erro, "Falha ao atualizar estágio");
+          recarregarDados(); // Restaura o estado original
+        })
+        .atualizarEstagioTarefa(sessionToken, tarefaId, novoEstagio);
+    }
+
+    function atualizarEstagioTarefa(tarefaId, novoEstagio) {
+        // Mostrar indicador de carregamento no cartão
+        const cartao = document.querySelector(`.kanban-card[data-id="${tarefaId}"]`);
+        if (cartao) {
+            cartao.classList.add("updating");
+        }
+
+        google.script.run
+            .withSuccessHandler(function (resultado) {
+                console.log(`Estágio da tarefa ${tarefaId} atualizado para ${novoEstagio}`);
+
+                // Atualizar o objeto tarefa na memória
+                const tarefaIndex = tarefas.findIndex(t => t.ID === tarefaId);
+                if (tarefaIndex !== -1) {
+                    tarefas[tarefaIndex].Estágio = novoEstagio;
+                    tarefas[tarefaIndex]["Data Atualização"] = new Date().toISOString();
+                }
+
+                // Remover classe de atualização
+                if (cartao) {
+                    cartao.classList.remove("updating");
+                }
+
+                // Atualizar contadores
+                atualizarTodosContadoresColunas();
+            })
+            .withFailureHandler(function (erro) {
+                console.error("Erro ao atualizar estágio da tarefa:", erro);
+                tratarErro(erro, "Falha ao atualizar estágio da tarefa");
+
+                // Remover classe de atualização
+                if (cartao) {
+                    cartao.classList.remove("updating");
+                }
+
+                // Recarregar tarefas para restaurar estado correto
+                carregarTarefas();
+            })
+            .atualizarEstagioTarefa(sessionToken, tarefaId, novoEstagio);
+    }
+    /**
+     * Salva uma tarefa, criando ou atualizando conforme necessário.
+     */
+    function salvarTarefa() {
+        // Obter dados do formulário
+        const tarefaId = document.getElementById("tarefa-id").value;
+        const tarefa = {
+            ID: tarefaId,
+            Título: document.getElementById("tarefa-titulo").value,
+            Descrição: document.getElementById("tarefa-descricao").value,
+            Projeto: document.getElementById("tarefa-projeto").value,
+            Responsável: document.getElementById("tarefa-responsavel").value,
+            Email: document.getElementById("tarefa-email").value,
+            Estágio: document.getElementById("tarefa-estagio").value,
+            Prioridade: document.getElementById("tarefa-prioridade").value,
+            Etiquetas: document.getElementById("tarefa-etiquetas").value,
+            Feedback: document.getElementById("tarefa-feedback").value
+        };
+
+        // Obter data limite
+        const dataLimiteInput = document.getElementById("tarefa-data-limite").value;
+        if (dataLimiteInput) {
+            tarefa["Data Limite"] = new Date(dataLimiteInput).toISOString();
+        }
+
+        // Validar campos obrigatórios
+        if (!tarefa.Título) {
+            tratarErro("O título da tarefa é obrigatório.", "Validação");
+            return;
+        }
+
+        // Mostrar indicador de carregamento
+        mostrarIndicadorCarregamento("Salvando tarefa...");
+
+        // Fechar modal
+        const modalElement = document.getElementById("modal-tarefa");
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        modal.hide();
+
+        if (tarefaId) {
+            // Atualizar tarefa existente
+            google.script.run
+                .withSuccessHandler(function (tarefaAtualizada) {
+                    // Atualizar tarefa na lista
+                    const index = tarefas.findIndex(t => t.ID === tarefaAtualizada.ID);
+                    if (index !== -1) {
+                        tarefas[index] = tarefaAtualizada;
+                    }
+
+                    // Recarregar quadro
+                    renderizarTarefas(tarefas);
+
+                    // Mostrar notificação
+                    mostrarNotificacao("Tarefa atualizada com sucesso!", "success");
+
+                    // Esconder indicador de carregamento
+                    esconderIndicadorCarregamento();
+                })
+                .withFailureHandler(function (erro) {
+                    console.error("Erro ao atualizar tarefa:", erro);
+                    tratarErro(erro, "Falha ao atualizar tarefa");
+                    esconderIndicadorCarregamento();
+                })
+                .atualizarTarefa(sessionToken, tarefa);
+        } else {
+            // Criar nova tarefa
+            google.script.run
+                .withSuccessHandler(function (novaTarefa) {
+                    // Adicionar tarefa à lista
+                    tarefas.push(novaTarefa);
+
+                    // Recarregar quadro
+                    renderizarTarefas(tarefas);
+
+                    // Mostrar notificação
+                    mostrarNotificacao("Tarefa criada com sucesso!", "success");
+
+                    // Esconder indicador de carregamento
+                    esconderIndicadorCarregamento();
+                })
+                .withFailureHandler(function (erro) {
+                    console.error("Erro ao criar tarefa:", erro);
+                    tratarErro(erro, "Falha ao criar tarefa");
+                    esconderIndicadorCarregamento();
+                })
+                .criarTarefa(sessionToken, tarefa);
+        }
+    }
+    /**
+     * Salva um aviso no mural, criando ou atualizando conforme necessário.
+     */
+    function salvarAviso() {
+        // Obter dados do formulário
+        const avisoId = document.getElementById("aviso-id").value;
+        const aviso = {
+            ID: avisoId,
+            Título: document.getElementById("aviso-titulo").value,
+            Conteúdo: document.getElementById("aviso-conteudo").value,
+            Autor: document.getElementById("aviso-autor").value,
+            Cor: document.getElementById("aviso-cor").value,
+            Fixado: document.getElementById("aviso-fixado").checked
+        };
+
+        // Obter data de expiração
+        const dataExpiracaoInput = document.getElementById("aviso-data-expiracao").value;
+        if (dataExpiracaoInput) {
+            aviso["Data Expiração"] = new Date(dataExpiracaoInput).toISOString();
+        }
+
+        // Validar campos obrigatórios
+        if (!aviso.Título) {
+            tratarErro("O título do aviso é obrigatório.", "Validação");
+            return;
+        }
+
+        if (!aviso.Conteúdo) {
+            tratarErro("O conteúdo do aviso é obrigatório.", "Validação");
+            return;
+        }
+
+        // Mostrar indicador de carregamento
+        mostrarIndicadorCarregamento("Salvando aviso...");
+
+        // Fechar modal
+        const modalElement = document.getElementById("modal-aviso");
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        modal.hide();
+
+        if (avisoId) {
+            // Atualizar aviso existente
+            google.script.run
+                .withSuccessHandler(function (avisoAtualizado) {
+                    // Atualizar aviso na lista
+                    const index = avisos.findIndex(a => a.ID === avisoAtualizado.ID);
+                    if (index !== -1) {
+                        avisos[index] = avisoAtualizado;
+                    }
+
+                    // Recarregar mural
+                    renderizarAvisos(avisos);
+
+                    // Mostrar notificação
+                    mostrarNotificacao("Aviso atualizado com sucesso!", "success");
+
+                    // Esconder indicador de carregamento
+                    esconderIndicadorCarregamento();
+                })
+                .withFailureHandler(function (erro) {
+                    console.error("Erro ao atualizar aviso:", erro);
+                    tratarErro(erro, "Falha ao atualizar aviso");
+                    esconderIndicadorCarregamento();
+                })
+                .atualizarAviso(sessionToken, aviso);
+        } else {
+            // Criar novo aviso
+            google.script.run
+                .withSuccessHandler(function (novoAviso) {
+                    // Adicionar aviso à lista
+                    avisos.push(novoAviso);
+
+                    // Recarregar mural
+                    renderizarAvisos(avisos);
+
+                    // Mostrar notificação
+                    mostrarNotificacao("Aviso criado com sucesso!", "success");
+
+                    // Esconder indicador de carregamento
+                    esconderIndicadorCarregamento();
+                })
+                .withFailureHandler(function (erro) {
+                    console.error("Erro ao criar aviso:", erro);
+                    tratarErro(erro, "Falha ao criar aviso");
+                    esconderIndicadorCarregamento();
+                })
+                .criarAviso(sessionToken, aviso);
+        }
+    }
+    /**
+     * Salva um usuário no sistema, criando ou atualizando conforme necessário.
+     */
+    function salvarUsuario() {
+        // Obter dados do formulário
+        const usuarioId = document.getElementById("usuario-id").value;
+        const usuario = {
+            ID: usuarioId,
+            "Nome Completo": document.getElementById("usuario-nome").value,
+            Email: document.getElementById("usuario-email").value,
+            Equipe: document.getElementById("usuario-equipe").value,
+            Situação: document.getElementById("usuario-situacao").value
+        };
+
+        // Obter data de admissão
+        const dataAdmissaoInput = document.getElementById("usuario-data-admissao").value;
+        if (dataAdmissaoInput) {
+            usuario["Data de Admissão"] = new Date(dataAdmissaoInput).toISOString();
+        }
+
+        // Obter data de encerramento se situação for Inativo
+        if (usuario.Situação === "Inativo") {
+            const dataEncerramentoInput = document.getElementById("usuario-data-encerramento").value;
+            if (dataEncerramentoInput) {
+                usuario["Data de Encerramento"] = new Date(dataEncerramentoInput).toISOString();
+            }
+        }
+
+        // Validar campos obrigatórios
+        if (!usuario["Nome Completo"]) {
+            tratarErro("O nome do usuário é obrigatório.", "Validação");
+            return;
+        }
+
+        if (!usuario.Email) {
+            tratarErro("O email do usuário é obrigatório.", "Validação");
+            return;
+        }
+
+        // Mostrar indicador de carregamento
+        mostrarIndicadorCarregamento("Salvando usuário...");
+
+        // Fechar modal
+        const modalElement = document.getElementById("modal-usuario");
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        modal.hide();
+
+        if (usuarioId) {
+            // Atualizar usuário existente
+            google.script.run
+                .withSuccessHandler(function (usuarioAtualizado) {
+                    // Atualizar usuário na lista
+                    const index = usuarios.findIndex(u => u.ID === usuarioAtualizado.ID);
+                    if (index !== -1) {
+                        usuarios[index] = usuarioAtualizado;
+                    }
+
+                    // Recarregar tabela
+                    renderizarUsuarios(usuarios);
+
+                    // Atualizar dropdowns que dependem de usuários
+                    popularDropdownUsuarios("#tarefa-responsavel", true);
+                    popularDropdownUsuarios("#daily-usuario", true);
+
+                    // Mostrar notificação
+                    mostrarNotificacao("Usuário atualizado com sucesso!", "success");
+
+                    // Esconder indicador de carregamento
+                    esconderIndicadorCarregamento();
+                })
+                .withFailureHandler(function (erro) {
+                    console.error("Erro ao atualizar usuário:", erro);
+                    tratarErro(erro, "Falha ao atualizar usuário");
+                    esconderIndicadorCarregamento();
+                })
+                .atualizarUsuario(sessionToken, usuario);
+        } else {
+            // Criar novo usuário
+            google.script.run
+                .withSuccessHandler(function (novoUsuario) {
+                    // Adicionar usuário à lista
+                    usuarios.push(novoUsuario);
+
+                    // Recarregar tabela
+                    renderizarUsuarios(usuarios);
+
+                    // Atualizar dropdowns que dependem de usuários
+                    popularDropdownUsuarios("#tarefa-responsavel", true);
+                    popularDropdownUsuarios("#daily-usuario", true);
+
+                    // Mostrar notificação
+                    mostrarNotificacao("Usuário criado com sucesso!", "success");
+
+                    // Esconder indicador de carregamento
+                    esconderIndicadorCarregamento();
+                })
+                .withFailureHandler(function (erro) {
+                    console.error("Erro ao criar usuário:", erro);
+                    tratarErro(erro, "Falha ao criar usuário");
+                    esconderIndicadorCarregamento();
+                })
+                .criarUsuario(sessionToken, usuario);
+        }
+    }
+    /**
+     * Alterna a situação de um usuário entre Ativo e Inativo.
+     * @param {string} usuarioId - ID do usuário a ser alterado.
+     */
+    function alternarSituacaoUsuario(usuarioId) {
+        const usuario = usuarios.find(u => u.ID === usuarioId);
+        if (!usuario) {
+            tratarErro("Usuário não encontrado.", "Erro");
+            return;
+        }
+
+        // Alternar situação
+        const novaSituacao = usuario.Situação === "Ativo" ? "Inativo" : "Ativo";
+
+        // Confirmar alteração
+        if (!confirm(`Deseja realmente ${novaSituacao === "Inativo" ? "desativar" : "ativar"} o usuário ${usuario["Nome Completo"]}?`)) {
+            return;
+        }
+
+        // Criar cópia do usuário com a nova situação
+        const usuarioAtualizado = { ...usuario, Situação: novaSituacao };
+
+        // Definir data de encerramento se estiver inativando
+        if (novaSituacao === "Inativo") {
+            usuarioAtualizado["Data de Encerramento"] = new Date().toISOString();
+        } else {
+            usuarioAtualizado["Data de Encerramento"] = null;
+        }
+
+        // Mostrar indicador de carregamento
+        mostrarIndicadorCarregamento("Atualizando usuário...");
+
+        // Atualizar usuário
+        google.script.run
+            .withSuccessHandler(function (resultado) {
+                // Atualizar usuário na lista
+                const index = usuarios.findIndex(u => u.ID === resultado.ID);
+                if (index !== -1) {
+                    usuarios[index] = resultado;
+                }
+
+                // Recarregar tabela
+                renderizarUsuarios(usuarios);
+
+                // Atualizar dropdowns que dependem de usuários
+                popularDropdownUsuarios("#tarefa-responsavel", true);
+                popularDropdownUsuarios("#daily-usuario", true);
+
+                // Mostrar notificação
+                mostrarNotificacao(`Usuário ${novaSituacao === "Inativo" ? "desativado" : "ativado"} com sucesso!`, "success");
+
+                // Esconder indicador de carregamento
+                esconderIndicadorCarregamento();
+            })
+            .withFailureHandler(function (erro) {
+                console.error("Erro ao alterar situação do usuário:", erro);
+                tratarErro(erro, "Falha ao alterar situação do usuário");
+                esconderIndicadorCarregamento();
+            })
+            .atualizarUsuario(sessionToken, usuarioAtualizado);
+    }
+
+    function salvarDaily() {
+        // Obter dados do formulário
+        const dailyId = document.getElementById("daily-id").value;
+        const daily = {
+            ID: dailyId,
+            "ID do Usuário": document.getElementById("daily-usuario").value,
+            "Data": document.getElementById("daily-data").value,
+            "Conteúdo": document.getElementById("daily-conteudo").value
+        };
+
+        // Validar campos obrigatórios
+        if (!daily["ID do Usuário"]) {
+            tratarErro("Selecione um usuário.", "Validação");
+            return;
+        }
+
+        if (!daily.Data) {
+            tratarErro("A data é obrigatória.", "Validação");
+            return;
+        }
+
+        if (!daily.Conteúdo) {
+            tratarErro("O conteúdo é obrigatório.", "Validação");
+            return;
+        }
+
+        // Converter data para ISO
+        if (daily.Data) {
+            daily.Data = new Date(daily.Data).toISOString();
+        }
+
+        // Obter nome do usuário
+        const usuario = usuarios.find(u => u.ID === daily["ID do Usuário"]);
+        if (usuario) {
+            daily["Nome do Usuário"] = usuario["Nome Completo"];
+        }
+
+        // Mostrar indicador de carregamento
+        mostrarIndicadorCarregamento("Salvando daily...");
+
+        // Fechar modal
+        const modalElement = document.getElementById("modal-daily");
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        modal.hide();
+
+        if (dailyId) {
+            // Atualizar daily existente
+            google.script.run
+                .withSuccessHandler(function (dailyAtualizado) {
+                    // Atualizar daily na lista
+                    const index = dailies.findIndex(d => d.ID === dailyAtualizado.ID);
+                    if (index !== -1) {
+                        dailies[index] = dailyAtualizado;
+                    } else {
+                        dailies.push(dailyAtualizado);
+                    }
+
+                    // Atualizar seção de dailies recentes
+                    renderizarDailiesRecentes(dailies);
+
+                    // Mostrar notificação
+                    mostrarNotificacao("Daily atualizado com sucesso!", "success");
+
+                    // Esconder indicador de carregamento
+                    esconderIndicadorCarregamento();
+                })
+                .withFailureHandler(function (erro) {
+                    console.error("Erro ao atualizar daily:", erro);
+                    tratarErro(erro, "Falha ao atualizar daily");
+                    esconderIndicadorCarregamento();
+                })
+                .atualizarDaily(sessionToken, daily);
+        } else {
+            // Criar novo daily
+            google.script.run
+                .withSuccessHandler(function (novoDaily) {
+                    // Adicionar daily à lista
+                    dailies.push(novoDaily);
+
+                    // Atualizar seção de dailies recentes
+                    renderizarDailiesRecentes(dailies);
+
+                    // Mostrar notificação
+                    mostrarNotificacao("Daily registrado com sucesso!", "success");
+
+                    // Esconder indicador de carregamento
+                    esconderIndicadorCarregamento();
+                })
+                .withFailureHandler(function (erro) {
+                    console.error("Erro ao criar daily:", erro);
+                    tratarErro(erro, "Falha ao registrar daily");
+                    esconderIndicadorCarregamento();
+                })
+                .criarDaily(sessionToken, daily);
+        }
+    }
+</script>

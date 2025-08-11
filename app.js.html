@@ -1,0 +1,422 @@
+<script>
+  /**
+   * Variáveis globais
+   */
+  let sessionToken = null;
+  let tarefas = [];
+  let avisos = [];
+  let usuarios = [];
+  let dailies = [];
+  let estagios = [];
+  let configuracoesApp = {};
+  let sortableInstances = [];
+  let isLoadingIndicatorVisible = false; // Flag para controlar o indicador de carregamento
+  let darkMode = false; // Flag para controlar o tema escuro/claro
+
+
+  function inicializarApp() {
+    // Inicializa os Modais do Bootstrap que antes estavam no handleLogin
+    detailsModal = new bootstrap.Modal(document.getElementById('modal-detalhes-tarefa'));
+    // columnSelectModal = new bootstrap.Modal(document.getElementById('column-select-modal')); // Descomente se tiver
+    aboutModal = new bootstrap.Modal(document.getElementById('aboutModal'));
+
+    // Verificar preferência de tema salva
+    carregarPreferenciaTema();
+
+    // Mostrar indicador de carregamento
+    mostrarIndicadorCarregamento("Inicializando...");
+
+    // Configurar eventos iniciais
+    configurarEventosGlobais();
+
+    // Testar conexão e carregar configurações
+    testarConexaoECarregarConfig();
+
+    // Configurar tooltips e popovers do Bootstrap
+    inicializarBootstrapComponents();
+
+    // Inicializa as propriedades do lado do servidor (se necessário)
+    google.script.run
+      .withFailureHandler(tratarErro)
+      .inicializarPropriedades(sessionToken);
+  }
+
+  function showSpinner(show) { document.getElementById('loading-spinner').style.display = show ? 'block' : 'none'; }
+
+  function handleLogin() {
+    showSpinner(true);
+    const username = document.getElementById('username').value;
+    const key = document.getElementById('clientKey').value;
+    const errorDiv = document.getElementById('login-error');
+    errorDiv.style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(response => {
+        showSpinner(false);
+        if (response.success) {
+          // Armazena o token para uso em todas as chamadas futuras
+          sessionToken = response.token;
+
+          // Esconde o contêiner de login e mostra a aplicação principal
+          document.getElementById('login-container').style.display = 'none';
+          document.querySelector('.navbar').style.display = 'flex'; // Mostra o cabeçalho
+          document.querySelector('.container-fluid.mt-3').style.display = 'block'; // Mostra o conteúdo
+
+          // AGORA sim, inicializa a aplicação
+          inicializarApp();
+        } else {
+          errorDiv.textContent = response.error || 'Usuário ou chave inválida.';
+          errorDiv.style.display = 'block';
+        }
+      })
+      .withFailureHandler(handleError) // Recomendo usar sua função tratarErro aqui
+      .authenticate(username, key);
+  }
+
+  /**
+   * Carrega a preferência de tema do localStorage
+   */
+  function carregarPreferenciaTema() {
+    try {
+      const savedTheme = localStorage.getItem('kanban_theme');
+      if (savedTheme === 'dark') {
+        darkMode = true;
+        aplicarTemaEscuro();
+      } else {
+        darkMode = false;
+        aplicarTemaClaro();
+      }
+    } catch (e) {
+      console.warn("Não foi possível acessar localStorage para preferência de tema:", e);
+      // Usar tema claro como padrão
+      darkMode = false;
+      aplicarTemaClaro();
+    }
+  }
+
+  /**
+   * Alterna entre tema escuro e claro
+   */
+  function alternarTema() {
+    darkMode = !darkMode;
+
+    if (darkMode) {
+      aplicarTemaEscuro();
+    } else {
+      aplicarTemaClaro();
+    }
+
+    // Salvar preferência
+    try {
+      localStorage.setItem('kanban_theme', darkMode ? 'dark' : 'light');
+    } catch (e) {
+      console.warn("Não foi possível salvar preferência de tema:", e);
+    }
+  }
+
+  /**
+   * Aplica o tema escuro
+   */
+  function aplicarTemaEscuro() {
+    document.body.classList.add('dark-mode');
+
+    // Atualizar toggle de tema
+    const btnTema = document.getElementById('btn-tema');
+    if (btnTema) {
+      btnTema.classList.add('dark');
+    }
+  }
+
+  /**
+   * Aplica o tema claro
+   */
+  function aplicarTemaClaro() {
+    document.body.classList.remove('dark-mode');
+
+    // Atualizar toggle de tema
+    const btnTema = document.getElementById('btn-tema');
+    if (btnTema) {
+      btnTema.classList.remove('dark');
+    }
+  }
+
+  /**
+   * Testa a conexão com o backend e carrega as configurações
+   */
+  function testarConexaoECarregarConfig() {
+    google.script.run
+      .withSuccessHandler(function (resultado) {
+
+        if (resultado && resultado.status === "sucesso") {
+          // Carregar configurações
+          mostrarIndicadorCarregamento("Carregando configurações...");
+          google.script.run
+            .withSuccessHandler(configurarApp)
+            .withFailureHandler(function (erro) {
+              tratarErro(erro, "Falha ao carregar configurações");
+              configurarAppComPadrao();
+            })
+            .obterConfiguracoes(sessionToken); // <-- CORRIGIDO
+        } else {
+          tratarErro(resultado.mensagem || "Erro de conexão desconhecido", "Falha no teste de conexão");
+          configurarAppComPadrao();
+        }
+      })
+      .withFailureHandler(function (erro) {
+        console.error("Erro fatal no teste de conexão:", erro);
+        tratarErro(erro, "Erro fatal de conexão com o servidor. Verifique as permissões e a configuração do script.");
+        configurarAppComPadrao();
+      })
+      .testarConexao(sessionToken); // <-- CORRIGIDO
+  }
+
+  function handleError(error) {
+    showSpinner(false);
+    tratarErro(error, "Erro de comunicação");
+    const errorDiv = document.getElementById('login-error');
+    if (errorDiv) {
+      errorDiv.textContent = 'Ocorreu um erro de comunicação com o servidor.';
+      errorDiv.style.display = 'block';
+    }
+  }
+
+  /**
+   * Configura a aplicação com as configurações carregadas
+   */
+  function configurarApp(config) {
+
+    configuracoesApp = config || {};
+
+    // Garantir que estagios seja um array válido
+    estagios = (config?.estagios || "Backlog,A Fazer,Em Andamento,Em Revisão,Concluído").split(",").map(e => e.trim());
+
+
+    // Preencher seletores de estágios
+    popularDropdownEstagios();
+
+    // Carregar dados principais
+    carregarDadosIniciais();
+  }
+
+  /**
+   * Configura a aplicação com valores padrão em caso de falha
+   */
+  function configurarAppComPadrao() {
+    console.warn("Configurando aplicação com valores padrão devido a erro anterior.");
+    const configPadrao = {
+      estagios: "Backlog,A Fazer,Em Andamento,Em Revisão,Concluído",
+      cores_prioridade: "#ff4d4d,#ffcc00,#4da6ff",
+      limite_avisos: "10",
+      versao: "1.0 (Padrão)"
+    };
+    configurarApp(configPadrao);
+  }
+
+
+
+
+
+
+
+  /**
+   * Mostra a seção especificada e oculta as outras
+   */
+  function mostrarSecao(idSecao) {
+    // Evitar recursão infinita
+    if (isLoadingIndicatorVisible) {
+      // Se o indicador de carregamento estiver visível, usar setTimeout para adiar
+      setTimeout(() => mostrarSecaoSemRecursao(idSecao), 100);
+      return;
+    }
+
+    mostrarSecaoSemRecursao(idSecao);
+  }
+
+  /**
+   * Versão sem recursão da função mostrarSecao
+   */
+  function mostrarSecaoSemRecursao(idSecao) {
+    ["secao-quadro", "secao-usuarios", "secao-relatorios", "secao-configuracoes"].forEach(id => {
+      const secao = document.getElementById(id);
+      if (secao) {
+        secao.classList.toggle("d-none", id !== idSecao);
+      }
+    });
+
+    // Atualizar link ativo na navegação
+    ["nav-quadro", "nav-usuarios", "nav-relatorios", "nav-configuracoes"].forEach(idNav => {
+      const link = document.getElementById(idNav);
+      if (link) {
+        link.classList.toggle("active", link.id === `nav-${idSecao.split("-")[1]}`);
+      }
+    });
+
+    // Carregar dados específicos da seção se necessário
+    if (idSecao === "secao-usuarios" && (!usuarios || usuarios.length === 0)) {
+      google.script.run
+        .withSuccessHandler(function (dadosUsuarios) {
+          usuarios = Array.isArray(dadosUsuarios) ? dadosUsuarios : [];
+          renderizarUsuarios(usuarios);
+        })
+        .withFailureHandler(function (erro) {
+          console.error("Erro ao carregar usuários:", erro);
+          tratarErro(erro, "Falha ao carregar usuários");
+          renderizarUsuarios([]);
+        })
+        .obterUsuarios(sessionToken);
+    } else if (idSecao === "secao-usuarios") {
+      renderizarUsuarios(usuarios);
+    }
+  }
+
+
+
+
+
+
+
+
+
+  function carregarDailiesRecentes() {
+    const container = document.getElementById("daily-recentes");
+    if (!container) return;
+
+    // Mostrar indicador de carregamento
+    container.innerHTML = `
+    <div class="text-center py-3">
+      <div class="spinner-border spinner-border-sm text-primary" role="status">
+        <span class="visually-hidden">Carregando...</span>
+      </div>
+      <p class="mt-2">Carregando dailies...</p>
+    </div>
+  `;
+
+    // Obter dailies de hoje
+    const hoje = moment().format("YYYY-MM-DD");
+    const filtros = { Data: hoje };
+
+    google.script.run
+      .withSuccessHandler(function (dadosDailies) {
+
+        dailies = Array.isArray(dadosDailies) ? dadosDailies : [];
+        renderizarDailiesRecentes(dailies);
+      })
+      .withFailureHandler(function (erro) {
+        console.error("Erro ao obter dailies recentes:", erro);
+        container.innerHTML = `
+        <div class="alert alert-danger">
+          Erro ao carregar dailies: ${erro}
+        </div>
+        <div class="text-center mt-3">
+        <p>Nenhum registro de daily para hoje.</p>
+        </div>
+      `;
+      })
+      .obterDailies(sessionToken, filtros);
+  }
+
+  // --- Funções Utilitárias ---
+
+
+
+
+
+
+
+  // Estilos para tema escuro
+  document.head.insertAdjacentHTML('beforeend', `
+<style id="dark-mode-styles">
+  body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+  }
+  
+  body.dark-mode .navbar {
+    background: linear-gradient(135deg, #1f1f1f 0%, #2d2d2d 100%) !important;
+  }
+  
+  body.dark-mode .card {
+    background-color: #1e1e1e;
+    border-color: #333;
+  }
+  
+  body.dark-mode .card-header {
+    background-color: #2a2a2a !important;
+    border-bottom-color: #333;
+  }
+  
+  body.dark-mode .list-group-item {
+    background-color: #1e1e1e;
+    border-color: #333;
+    color: #e0e0e0;
+  }
+  
+  body.dark-mode .modal-content {
+    background-color: #1e1e1e;
+    border-color: #333;
+  }
+  
+  body.dark-mode .modal-header,
+  body.dark-mode .modal-footer {
+    border-color: #333;
+  }
+  
+  body.dark-mode .form-control,
+  body.dark-mode .form-select {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #e0e0e0;
+  }
+  
+  body.dark-mode .form-control:focus,
+  body.dark-mode .form-select:focus {
+    background-color: #2a2a2a;
+    border-color: #0d6efd;
+    color: #e0e0e0;
+  }
+  
+  body.dark-mode .form-control::placeholder {
+    color: #aaa;
+  }
+  
+  body.dark-mode .table {
+    color: #e0e0e0;
+  }
+  
+  body.dark-mode .table-hover tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.075);
+  }
+  
+  body.dark-mode .kanban-column {
+    background-color: #2a2a2a;
+    border-color: #333;
+  }
+  
+  body.dark-mode .kanban-column-header {
+    background-color: #333;
+    color: #e0e0e0;
+  }
+  
+  body.dark-mode .kanban-card {
+    background-color: #1e1e1e;
+    border-color: #444;
+    color: #e0e0e0;
+  }
+  
+  body.dark-mode .kanban-card-tag {
+    background-color: #333;
+  }
+  
+  body.dark-mode .aviso-card {
+    border-color: #444;
+  }
+  
+  body.dark-mode .text-muted {
+    color: #aaa !important;
+  }
+}
+</style>
+`);
+
+
+</script>

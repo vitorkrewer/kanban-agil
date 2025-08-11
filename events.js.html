@@ -1,0 +1,52 @@
+<script>
+    /**
+     * Configura eventos globais da aplicação
+     */
+    function configurarEventosGlobais() {
+        // Navegação
+        document.getElementById("nav-quadro")?.addEventListener("click", (e) => { e.preventDefault(); mostrarSecao("secao-quadro"); });
+        document.getElementById("nav-usuarios")?.addEventListener("click", (e) => { e.preventDefault(); mostrarSecao("secao-usuarios"); });
+        document.getElementById("nav-relatorios")?.addEventListener("click", (e) => { e.preventDefault(); mostrarSecao("secao-relatorios"); });
+        document.getElementById("nav-configuracoes")?.addEventListener("click", (e) => { e.preventDefault(); mostrarSecao("secao-configuracoes"); });
+
+        // Botões do Header
+        document.getElementById("btn-nova-tarefa")?.addEventListener("click", () => abrirModalTarefa());
+        document.getElementById("btn-novo-aviso")?.addEventListener("click", () => abrirModalAviso());
+        document.getElementById("btn-recarregar")?.addEventListener("click", recarregarDados);
+        document.getElementById("btn-usuarios")?.addEventListener("click", () => mostrarSecao("secao-usuarios"));
+        document.getElementById("btn-tema")?.addEventListener("click", alternarTema);
+
+        // Título Kanban Ágil no header - retorna à tela inicial
+        document.querySelector(".navbar-brand")?.addEventListener("click", () => mostrarSecao("secao-quadro"));
+
+        // Botões de Usuários
+        document.getElementById("btn-novo-usuario")?.addEventListener("click", () => abrirModalUsuario());
+        document.getElementById("btn-salvar-usuario")?.addEventListener("click", salvarUsuario);
+        document.getElementById("usuario-situacao")?.addEventListener("change", toggleDataEncerramento);
+
+        // Botões de Tarefas
+        document.getElementById("btn-salvar-tarefa")?.addEventListener("click", salvarTarefa);
+        document.getElementById("tarefa-responsavel")?.addEventListener("change", atualizarEmailResponsavel);
+
+        // Botões de Avisos
+        document.getElementById("btn-salvar-aviso")?.addEventListener("click", salvarAviso);
+
+        // Botões de Daily
+        document.getElementById("btn-nova-daily")?.addEventListener("click", abrirModalDaily);
+        document.getElementById("btn-salvar-daily")?.addEventListener("click", salvarDaily);
+    }
+
+    function atualizarEmailResponsavel() {
+        const responsavelSelect = document.getElementById("tarefa-responsavel");
+        const emailInput = document.getElementById("tarefa-email");
+
+        if (responsavelSelect && emailInput) {
+            const selectedOption = responsavelSelect.options[responsavelSelect.selectedIndex];
+            if (selectedOption && selectedOption.dataset.email) {
+                emailInput.value = selectedOption.dataset.email;
+            } else {
+                emailInput.value = "";
+            }
+        }
+    }
+</script>

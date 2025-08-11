@@ -1,0 +1,654 @@
+<style>
+    /* Estilos personalizados para o Quadro Kanban Ágil */
+    /* Variáveis de cores */
+    :root {
+        --primary: #4361ee;
+        --secondary: #3a0ca3;
+        --accent: #f72585;
+        --light-blue: #4cc9f0;
+        --medium-purple: #7209b7;
+        --dark-purple: #480ca8;
+        --light-bg: #f8f9fa;
+        --dark-text: #212529;
+        --light-text: #ffffff;
+        --column-bg: rgba(248, 249, 250, 0.8);
+        --card-bg: rgba(255, 255, 255, 0.9);
+        --shadow-sm: 0 .125rem .25rem rgba(0, 0, 0, .075);
+        --shadow-md: 0 .5rem 1rem rgba(0, 0, 0, .15);
+        --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, .175);
+    }
+
+    /* Estilos gerais */
+    body {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* Tema escuro */
+    body.dark-mode {
+        background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+        color: #f8f9fa;
+    }
+
+    #login-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+    }
+
+    /* Cabeçalho */
+    .navbar {
+        background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+        padding: 0.8rem 1rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Correção para o título Kanban Ágil */
+    .navbar-brand {
+        font-weight: 700;
+        font-size: 1.5rem;
+        letter-spacing: 0.5px;
+        color: #4361ee !important;
+    }
+
+    body.dark-mode .navbar-brand {
+        color: white !important;
+    }
+
+
+    /* Correção para os links da navbar no tema claro */
+    .navbar-nav .nav-link {
+        color: var(--dark-text);
+        /* Cor escura no tema claro */
+    }
+
+    /* Correção para os links da navbar no tema escuro */
+    body.dark-mode .navbar-nav .nav-link {
+        color: white !important;
+        /* Cor branca no tema escuro */
+    }
+
+    .navbar-nav .nav-link:hover,
+    .navbar-nav .nav-link:focus {
+        color: rgba(0, 0, 0, 0.85);
+        /* Cor escura com transparência no hover no tema claro */
+    }
+
+    body.dark-mode .navbar-nav .nav-link:hover,
+    body.dark-mode .navbar-nav .nav-link:focus {
+        color: rgba(255, 255, 255, 0.85) !important;
+        /* Cor branca com transparência no hover no tema escuro */
+    }
+
+    .navbar-nav .nav-link.active {
+        color: var(--dark-text);
+        font-weight: bold;
+    }
+
+    body.dark-mode .navbar-nav .nav-link.active {
+        color: white !important;
+        font-weight: bold;
+    }
+
+    /* Quadro Kanban */
+    .kanban-board {
+        display: flex;
+        overflow-x: auto;
+        padding: 1rem 0.5rem;
+        min-height: 70vh;
+    }
+
+    .kanban-column {
+        flex: 0 0 300px;
+        margin: 0 0.5rem;
+        background: var(--column-bg);
+        border-radius: 0.5rem;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        max-height: 100%;
+    }
+
+    /* Limitar altura das colunas e adicionar barra de rolagem após 5 cartões */
+    .kanban-column-body {
+        padding: 1rem;
+        flex-grow: 1;
+        overflow-y: auto;
+        max-height: 500px;
+        /* Altura para aproximadamente 5 cartões */
+    }
+
+    body.dark-mode .kanban-column {
+        background: rgba(52, 58, 64, 0.8);
+        color: var(--light-text);
+    }
+
+    .kanban-column-header {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 0.5rem 0.5rem 0 0;
+        border-bottom: 3px solid var(--primary);
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    body.dark-mode .kanban-column-header {
+        background: rgba(33, 37, 41, 0.7);
+        color: var(--light-text);
+    }
+
+    .kanban-card {
+        background: var(--card-bg);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-sm);
+        cursor: grab;
+        transition: all 0.2s ease;
+        position: relative;
+        border-left: 4px solid #ccc;
+    }
+
+    body.dark-mode .kanban-card {
+        background: rgba(52, 58, 64, 0.9);
+        color: var(--light-text);
+    }
+
+    .kanban-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .kanban-card.priority-alta {
+        border-left-color: #ff4d4d;
+    }
+
+    .kanban-card.priority-media {
+        border-left-color: #ffcc00;
+    }
+
+    .kanban-card.priority-baixa {
+        border-left-color: #4da6ff;
+    }
+
+    .kanban-card-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+    }
+
+    .kanban-card-desc {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+
+    body.dark-mode .kanban-card-desc {
+        color: #adb5bd;
+    }
+
+    .kanban-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .kanban-card-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-top: 0.5rem;
+    }
+
+    .kanban-card-tag {
+        font-size: 0.7rem;
+        padding: 0.1rem 0.5rem;
+        border-radius: 1rem;
+        background: rgba(67, 97, 238, 0.1);
+        color: var(--primary);
+    }
+
+    body.dark-mode .kanban-card-tag {
+        background: rgba(67, 97, 238, 0.3);
+        color: #a5b4fc;
+    }
+
+    .kanban-card-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--light-blue);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    /* Mural de Avisos */
+    .mural-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 0.5rem;
+    }
+
+    .aviso-card {
+        flex: 1 1 250px;
+        min-height: 150px;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: var(--shadow-sm);
+        background: #fff;
+        position: relative;
+        transform: rotate(0deg);
+        /* Removida a inclinação */
+        transition: all 0.2s ease;
+    }
+
+    body.dark-mode .aviso-card {
+        background: #343a40;
+        color: var(--light-text);
+    }
+
+    .aviso-card:nth-child(even) {
+        transform: rotate(0deg);
+        /* Removida a inclinação */
+    }
+
+    .aviso-card:hover {
+        transform: scale(1.02);
+        /* Mantido apenas o efeito de escala */
+        box-shadow: var(--shadow-md);
+        z-index: 1;
+    }
+
+    .aviso-card.fixado {
+        border: 2px dashed var(--accent);
+    }
+
+    .aviso-card.fixado::before {
+        content: "📌";
+        position: absolute;
+        top: -10px;
+        right: 10px;
+        font-size: 1.2rem;
+    }
+
+    .aviso-titulo {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+    }
+
+    .aviso-conteudo {
+        font-size: 0.9rem;
+    }
+
+    .aviso-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        font-size: 0.8rem;
+        color: #1E90FF;
+    }
+
+    body.dark-mode .aviso-footer {
+        color: white;
+    }
+
+    /* Modais */
+    .modal-content {
+        border-radius: 0.5rem;
+        box-shadow: var(--shadow-lg);
+    }
+
+    body.dark-mode .modal-content {
+        background-color: #343a40;
+        color: var(--light-text);
+    }
+
+    .modal-header {
+        background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        border-radius: 0.5rem 0.5rem 0 0;
+    }
+
+    .modal-footer {
+        border-top: none;
+    }
+
+    body.dark-mode .modal-footer {
+        border-color: #495057;
+    }
+
+    /* Botões */
+    .btn-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+        background: var(--secondary);
+        border-color: var(--secondary);
+    }
+
+    .btn-secondary {
+        background: var(--medium-purple);
+        border-color: var(--medium-purple);
+    }
+
+    .btn-secondary:hover {
+        background: var(--dark-purple);
+        border-color: var(--dark-purple);
+    }
+
+    /* Formulários no tema escuro */
+    body.dark-mode .form-control,
+    body.dark-mode .form-select {
+        background-color: #495057;
+        border-color: #6c757d;
+        color: #f8f9fa;
+    }
+
+    body.dark-mode .form-control:focus,
+    body.dark-mode .form-select:focus {
+        background-color: #495057;
+        color: #f8f9fa;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+    }
+
+    body.dark-mode .form-control::placeholder {
+        color: #adb5bd;
+    }
+
+    body.dark-mode .form-label {
+        color: #e9ecef;
+    }
+
+    /* Cards no tema escuro */
+    body.dark-mode .card {
+        background-color: #343a40;
+        border-color: #495057;
+    }
+
+    body.dark-mode .card-header {
+        background-color: #212529;
+        color: white;
+        border-color: #495057;
+    }
+
+    body.dark-mode .card-body {
+        color: #e9ecef;
+    }
+
+    /* Tabelas no tema escuro */
+    body.dark-mode .table {
+        color: #e9ecef;
+    }
+
+    body.dark-mode .table-hover tbody tr:hover {
+        color: #f8f9fa;
+        background-color: rgba(67, 97, 238, 0.1);
+    }
+
+    body.dark-mode .table td,
+    body.dark-mode .table th {
+        border-color: #495057;
+    }
+
+    /* Animações */
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .kanban-board {
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .kanban-column {
+            flex: 0 0 auto;
+            width: 100%;
+            margin: 0 0 1rem 0;
+            max-height: none;
+        }
+    }
+
+    /* Efeitos de glassmorfismo */
+    .glass-effect {
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    body.dark-mode .glass-effect {
+        background: rgba(33, 37, 41, 0.25);
+        border: 1px solid rgba(33, 37, 41, 0.18);
+    }
+
+    /* Efeitos de neumorfismo */
+    .neumorph {
+        border-radius: 10px;
+        background: #f0f0f0;
+        box-shadow: 5px 5px 10px #d9d9d9, -5px -5px 10px #ffffff;
+    }
+
+    body.dark-mode .neumorph {
+        background: #343a40;
+        box-shadow: 5px 5px 10px #2a2e33, -5px -5px 10px #3e464d;
+    }
+
+    /* Toasts */
+    .toast {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 0.5rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    body.dark-mode .toast {
+        background: rgba(52, 58, 64, 0.95);
+        color: #f8f9fa;
+    }
+
+    /* Spinner de carregamento */
+    .loading-spinner {
+        padding: 2rem;
+    }
+
+    body.dark-mode .loading-spinner {
+        color: #f8f9fa;
+    }
+
+    /* Truncar e-mail no card de detalhes */
+    .email-truncate {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+    }
+
+    /* Botão de edição para Daily */
+    .daily-card {
+        position: relative;
+    }
+
+    .daily-actions {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+
+    .daily-actions:hover {
+        opacity: 1;
+    }
+
+    /* Estilos para o botão toggle de tema */
+    .theme-toggle-btn {
+        position: relative;
+        width: 60px;
+        height: 30px;
+        border-radius: 15px;
+        background-color: #343a40;
+        border: 2px solid #ffffff;
+        cursor: pointer;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .theme-toggle-slider {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background-color: #ffffff;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .theme-toggle-btn.dark .theme-toggle-slider {
+        left: 32px;
+        background-color: #ffc107;
+    }
+
+    .theme-toggle-icon {
+        color: #343a40;
+        font-size: 12px;
+    }
+
+    .theme-toggle-btn.dark .theme-toggle-icon {
+        color: #343a40;
+    }
+
+    .theme-toggle-bg-icon {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 14px;
+        color: #ffffff;
+    }
+
+    .theme-toggle-moon {
+        left: 8px;
+    }
+
+    .theme-toggle-sun {
+        right: 8px;
+    }
+
+    #loading-spinner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1060;
+    }
+
+    .spinner-overlay {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(4px);
+    }
+
+    .spinner-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        gap: 15px;
+    }
+
+    .spinner-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #0d6efd;
+        animation: spinner-bounce 1.4s infinite ease-in-out both;
+    }
+
+    .spinner-dot:nth-child(1) {
+        animation-delay: -0.32s;
+    }
+
+    .spinner-dot:nth-child(2) {
+        animation-delay: -0.16s;
+    }
+
+    @keyframes spinner-bounce {
+
+        0%,
+        80%,
+        100% {
+            transform: scale(0);
+        }
+
+        40% {
+            transform: scale(1.0);
+        }
+    }
+
+    .modal-body h6 {
+        font-weight: bold;
+        color: #0d6efd;
+        margin-top: 1rem;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 0.5rem;
+    }
+
+    #column-select-modal .modal-body {
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .linkedin-link {
+        text-decoration: none;
+        color: #0a66c2;
+        font-weight: 500;
+    }
+
+    .linkedin-link:hover {
+        text-decoration: underline;
+    }
+
+    .linkedin-link .bi-linkedin {
+        margin-right: 0.3rem;
+    }
+
+    .bi-box-arrow-up-right.external-link-icon {
+        font-size: 0.8em;
+        margin-left: auto;
+    }
+</style>

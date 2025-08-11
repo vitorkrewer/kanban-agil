@@ -23,7 +23,7 @@ Aplicação web full-stack que implementa um quadro Kanban funcional. O backend 
 
 O Kanban Ágil é uma ferramenta de gerenciamento de projetos que permite organizar tarefas em estágios (Backlog, A Fazer, Em Andamento, etc.) de forma visual e intuitiva. Ele foi desenvolvido para ser uma solução de baixo custo, segura e altamente personalizável, ideal para equipes pequenas e projetos pessoais.
 
-Este projeto faz parte do projeto **LearningFly**, uma aplicação web desenvolvida com Google Apps Script, criada para auxiliar na gestão inteligente de cursos, materiais didáticos e fluxos educacionais. A ferramenta integra-se ao Google Workspace (Drive, Planilhas, Documentos) para tornar processos pedagógicos mais organizados, eficientes e automatizados. [Clique aqui](https://github.com/vitorkrewer/learning-fly-gapps) e conheça outros módulos do projeto em desenvolvimento.
+Esta aplicação faz parte do projeto **LearningFly**, uma aplicação web desenvolvida com Google Apps Script, criada para auxiliar na gestão inteligente de cursos, materiais didáticos e fluxos educacionais. A ferramenta integra-se ao Google Workspace (Drive, Planilhas, Documentos) para tornar processos pedagógicos mais organizados, eficientes e automatizados. [Clique aqui](https://github.com/vitorkrewer/learning-fly-gapps) e conheça outros módulos do projeto em desenvolvimento.
 
 O projeto foi idealizado e desenvolvido por **Vitor Krewer**, unindo tecnologia, design instrucional e pensamento sistêmico para resolver desafios reais de equipes que trabalham na educação digital.
 

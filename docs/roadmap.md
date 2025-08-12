@@ -1,5 +1,7 @@
 # Roadmap do Projeto Kanban Ágil
 
+![Status: Em desenvolvimento](https://img.shields.io/badge/Status-Em%20Desenvolvimento-orange?style=flat-square)
+
 Este documento descreve a direção futura e as prioridades de desenvolvimento para o projeto Kanban Ágil. O objetivo é fornecer uma visão clara das próximas funcionalidades e melhorias, alinhando o esforço de desenvolvimento com o valor agregado para o usuário final.
 
 Este é um documento vivo e será atualizado conforme o projeto evolui e novas ideias surgem.
@@ -31,7 +33,7 @@ Este é um documento vivo e será atualizado conforme o projeto evolui e novas i
 
 ## 🗺️ Roadmap Futuro
 
-### 3º Trimestre de 2025: Foco em Qualidade de Vida e Expansão do Core
+### Foco em Qualidade de Vida e Expansão do Core
 
 * **✨ Filtros e Pesquisa no Quadro:**
     * Implementar uma barra de pesquisa para encontrar tarefas por título, descrição ou ID.
@@ -42,12 +44,11 @@ Este é um documento vivo e será atualizado conforme o projeto evolui e novas i
 
 * **✨ Anexos nas Tarefas (Google Drive):**
     * Permitir que os usuários anexem arquivos do Google Drive diretamente nos cartões de tarefas, salvando os links na planilha.
-    ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow?style=for-the-badge)
 
 * **🎨 Melhorias na UI da Seção de Daily:**
     * Criar uma visualização de calendário ou uma lista paginada para consultar os registros de dailies de dias anteriores facilmente.
 
-### 4º Trimestre de 2025: Inteligência de Dados e Colaboração
+### Inteligência de Dados e Colaboração
 
 * **✨ Implementação da Seção de Relatórios:**
     * Desenvolver a seção de "Relatórios" com gráficos dinâmicos (ex: usando a API Google Charts).
@@ -62,7 +63,7 @@ Este é um documento vivo e será atualizado conforme o projeto evolui e novas i
 * **🛠️ Logs de Atividade Globais:**
     * Expandir o histórico individual das tarefas para um log de atividades geral, onde seja possível ver todas as ações importantes que aconteceram no quadro (quem moveu, quem criou, quem concluiu, etc.).
 
-### 2026 e Além: Escalabilidade e Ecossistema
+### Escalabilidade e Ecossistema
 
 * **🛠️ Suporte a Múltiplos Quadros (Projetos):**
     * Refatorar a arquitetura para permitir que o usuário crie e alterne entre múltiplos quadros Kanban, cada um associado a um projeto diferente. Esta é uma evolução majoritária que transforma a ferramenta em um sistema de gerenciamento multi-projeto.

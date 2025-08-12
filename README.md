@@ -3,15 +3,15 @@
   <img src="docs/images/logo-learning-fly-full.png" alt="Logo do LearningFly" width="200">
 </p>
 
-![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-4285F4?style=for-the-badge&logo=google&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
-![Google Sheets](https://img.shields.io/badge/Google%20Sheets-34A853?style=for-the-badge&logo=google-sheets&logoColor=white)
-![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)
-![Font Awesome](https://img.shields.io/badge/Font%20Awesome-528DD7?style=for-the-badge&logo=font-awesome&logoColor=white)
-![SortableJS](https://img.shields.io/badge/SortableJS-212529?style=for-the-badge&logo=js&logoColor=white)
-![MomentJS](https://img.shields.io/badge/MomentJS-212529?style=for-the-badge&logo=js&logoColor=white)
+![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-4285F4?style=flat-square&logo=google&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white)
+![Google Sheets](https://img.shields.io/badge/Google%20Sheets-34A853?style=flat-square&logo=google-sheets&logoColor=white)
+![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=flat-square&logo=bootstrap&logoColor=white)
+![Font Awesome](https://img.shields.io/badge/Font%20Awesome-528DD7?style=flat-square&logo=font-awesome&logoColor=white)
+![SortableJS](https://img.shields.io/badge/SortableJS-212529?style=flat-square&logo=javascript&logoColor=white)
+![MomentJS](https://img.shields.io/badge/MomentJS-212529?style=flat-square&logo=javascript&logoColor=white)
 
 Aplicação web full-stack que implementa um quadro Kanban funcional. O backend é construído com Google Apps Script (JavaScript/V8) e o frontend com HTML/CSS/JS, utilizando bibliotecas como Bootstrap e SortableJS. A solução demonstra o uso de Google Sheets como um banco de dados NoSQL-like, além de um sistema de autenticação via token com o CacheService do Google.
 
@@ -20,7 +20,7 @@ Aplicação web full-stack que implementa um quadro Kanban funcional. O backend 
 </p>
 
 ## 🎯 Sobre o Projeto
-![Status](https://img.shields.io/badge/status-ativo-brightgreen?style=for-the-badge)
+![Status: Ativo](https://img.shields.io/badge/Status-Ativo-brightgreen?style=flat-square)
 
 O Kanban Ágil é uma ferramenta de gerenciamento de projetos que permite organizar tarefas em estágios (Backlog, A Fazer, Em Andamento, etc.) de forma visual e intuitiva. Ele foi desenvolvido para ser uma solução de baixo custo, segura e altamente personalizável, ideal para equipes pequenas e projetos pessoais.
 
@@ -42,12 +42,6 @@ O projeto foi idealizado e desenvolvido por **Vitor Krewer**, unindo tecnologia,
   <img src="docs/images/Screenshot_1_kanbanAgil.png" alt="Screenshot kanbanAgil" width="800">
 </p>
 
-## 🛠️ Tecnologias Utilizadas
-
-* **Backend:** Google Apps Script (`code.gs`)
-* **Banco de Dados:** Google Sheets
-* **Frontend:** HTML, CSS, JavaScript
-* **Bibliotecas:** Bootstrap 5, Font Awesome, SortableJS, Moment.js
 
 ## 🚀 Como Configurar e Usar
 
